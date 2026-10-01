@@ -1,9 +1,8 @@
 import Link from "next/link";
 
 import { Card } from "@/components/ui/Card";
-import { Pill } from "@/components/ui/Pill";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import { ArrowRightIcon, WalletIcon } from "@/components/ui/icons";
+import { ArrowRightIcon } from "@/components/ui/icons";
 import type { BudgetSummary } from "@/lib/dashboard-data";
 import { formatRupiah } from "@/lib/format";
 
@@ -21,8 +20,6 @@ export function BudgetHero({
         ? "warm"
         : "accent";
 
-  const pillTone = tone === "accent" ? "accent" : "warm";
-
   // Hero answers "how much can I still spend this month?" directly.
   // When over budget, remaining goes negative and we flip the label.
   const overBudget = budget.remaining < 0;
@@ -36,23 +33,15 @@ export function BudgetHero({
 
   return (
     <Card className="p-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs tracking-wide text-muted uppercase">
-            {heroLabel} · {periodLabel}
-          </p>
-          <p
-            className={`mt-2 text-[40px] leading-none font-semibold tracking-tight tabular-nums ${heroColor}`}
-          >
-            {overBudget ? "−" : ""}
-            {formatRupiah(heroAmount)}
-          </p>
-        </div>
-        <Pill tone={pillTone}>
-          <WalletIcon className="h-3.5 w-3.5" />
-          {budget.percentUsed}% used
-        </Pill>
-      </div>
+      <p className="text-xs tracking-wide text-muted uppercase">
+        {heroLabel} · {periodLabel}
+      </p>
+      <p
+        className={`mt-2 text-[40px] leading-none font-semibold tracking-tight tabular-nums ${heroColor}`}
+      >
+        {overBudget ? "−" : ""}
+        {formatRupiah(heroAmount)}
+      </p>
 
       <p className="mt-4 text-sm leading-relaxed text-muted-strong">
         Spent{" "}
