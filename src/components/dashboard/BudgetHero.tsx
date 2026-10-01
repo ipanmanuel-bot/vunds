@@ -22,22 +22,30 @@ export function BudgetHero({
         : "accent";
 
   const pillTone = tone === "accent" ? "accent" : "warm";
-  const remainingColor =
-    tone === "danger"
-      ? "text-[color:var(--danger)]"
-      : tone === "warm"
-        ? "text-[color:var(--warm-fg)]"
-        : "text-accent-strong";
+
+  // Hero answers "how much can I still spend this month?" directly.
+  // When over budget, remaining goes negative and we flip the label.
+  const overBudget = budget.remaining < 0;
+  const heroAmount = Math.abs(budget.remaining);
+  const heroLabel = overBudget ? "Over budget this month" : "Left to spend";
+  const heroColor = overBudget
+    ? "text-[color:var(--danger)]"
+    : tone === "warm"
+      ? "text-[color:var(--warm-fg)]"
+      : "text-foreground";
 
   return (
     <Card className="p-6">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs tracking-wide text-muted uppercase">
-            Monthly budget · {periodLabel}
+            {heroLabel} · {periodLabel}
           </p>
-          <p className="mt-2 text-[40px] leading-none font-semibold tracking-tight">
-            {formatRupiah(budget.totalBudget)}
+          <p
+            className={`mt-2 text-[40px] leading-none font-semibold tracking-tight tabular-nums ${heroColor}`}
+          >
+            {overBudget ? "−" : ""}
+            {formatRupiah(heroAmount)}
           </p>
         </div>
         <Pill tone={pillTone}>
@@ -47,11 +55,15 @@ export function BudgetHero({
       </div>
 
       <p className="mt-4 text-sm leading-relaxed text-muted-strong">
-        Spent {formatRupiah(budget.totalSpent)} so far with{" "}
-        <span className={`font-medium ${remainingColor}`}>
-          {formatRupiah(budget.remaining)}
+        Spent{" "}
+        <span className="font-medium text-foreground tabular-nums">
+          {formatRupiah(budget.totalSpent)}
         </span>{" "}
-        left to budget this month.
+        of your{" "}
+        <span className="font-medium text-foreground tabular-nums">
+          {formatRupiah(budget.totalBudget)}
+        </span>{" "}
+        monthly budget.
       </p>
 
       <div className="mt-5 rounded-2xl bg-surface-tint p-4">
