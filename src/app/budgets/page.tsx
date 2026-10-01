@@ -158,7 +158,15 @@ export default async function BudgetsPage({
           </Card>
 
           <Card className="p-5">
-            <h2 className="mb-2 text-sm font-semibold">By category</h2>
+            <div className="mb-2 flex items-end justify-between gap-3">
+              <h2 className="text-sm font-semibold">By category</h2>
+              <Link
+                href="/categories"
+                className="inline-flex items-center gap-1 text-[11px] text-accent-strong"
+              >
+                Customize categories <ArrowRightIcon className="h-3 w-3" />
+              </Link>
+            </div>
             {budget.lines.length === 0 ? (
               <p className="text-sm text-muted">
                 No budgets set for {periodLabel}.
