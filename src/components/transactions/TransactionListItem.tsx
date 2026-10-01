@@ -55,8 +55,8 @@ export function TransactionListItem({ item }: { item: Item }) {
       href={`/transactions/${item.id}`}
       // No first:/last: modifiers — each Link is the only child of its own
       // <li>, so those modifiers would always resolve true and strip padding
-      // on every row (making them touch). Keep uniform py-4 across all rows.
-      className="flex items-center gap-3 py-4"
+      // on every row (making them touch). Keep uniform py-3 across all rows.
+      className="flex items-center gap-3 py-3"
     >
       <div
         className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${badge.bg}`}
