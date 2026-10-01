@@ -1,30 +1,62 @@
 import Link from "next/link";
 
-import { Card } from "@/components/ui/Card";
-import { FormField, inputClass, selectClass, textareaClass } from "@/components/ui/FormField";
 import { createExpenseAction } from "@/app/transactions/actions";
+import { Card } from "@/components/ui/Card";
+import {
+  FormField,
+  inputClass,
+  selectClass,
+  textareaClass,
+} from "@/components/ui/FormField";
 import type {
   AccountOption,
   CategoryOption,
   FundOption,
 } from "@/lib/transactions-data";
 
+export interface ExpenseDefaults {
+  amount?: number;
+  accountId?: string;
+  categoryId?: string;
+  fundId?: string;
+  merchant?: string;
+  note?: string;
+}
+
 export function ExpenseForm({
   accounts,
   categories,
   funds,
   defaultDate,
+  defaults,
+  action = createExpenseAction,
+  transactionId,
+  submitLabel = "Save expense",
+  cancelHref = "/transactions",
+  extraPendingSlot,
 }: {
   accounts: AccountOption[];
   categories: CategoryOption[];
   funds: FundOption[];
   defaultDate: string;
+  defaults?: ExpenseDefaults;
+  action?: (fd: FormData) => Promise<void>;
+  transactionId?: string;
+  submitLabel?: string;
+  cancelHref?: string;
+  /** Rendered inside the <form> below the Save button — used by the detail
+   *  page to add a Reject button that posts to a different action. */
+  extraPendingSlot?: React.ReactNode;
 }) {
   const expenseCategories = categories.filter((c) => c.kind === "expense");
 
   return (
     <Card className="p-5">
-      <form action={createExpenseAction} className="flex flex-col gap-4">
+      <form action={action} className="flex flex-col gap-4">
+        {transactionId ? (
+          <input type="hidden" name="transactionId" value={transactionId} />
+        ) : null}
+
         <FormField label="Amount (IDR)" htmlFor="amount">
           <input
             id="amount"
@@ -35,6 +67,7 @@ export function ExpenseForm({
             step="1"
             required
             placeholder="0"
+            defaultValue={defaults?.amount ?? ""}
             className={inputClass}
           />
         </FormField>
@@ -44,7 +77,7 @@ export function ExpenseForm({
             id="accountId"
             name="accountId"
             required
-            defaultValue=""
+            defaultValue={defaults?.accountId ?? ""}
             className={selectClass}
           >
             <option value="" disabled>
@@ -63,7 +96,7 @@ export function ExpenseForm({
             id="categoryId"
             name="categoryId"
             required
-            defaultValue=""
+            defaultValue={defaults?.categoryId ?? ""}
             className={selectClass}
           >
             <option value="" disabled>
@@ -82,7 +115,12 @@ export function ExpenseForm({
           htmlFor="fundId"
           hint="Attach this expense to a goal — purely informational, does not move money between funds."
         >
-          <select id="fundId" name="fundId" defaultValue="" className={selectClass}>
+          <select
+            id="fundId"
+            name="fundId"
+            defaultValue={defaults?.fundId ?? ""}
+            className={selectClass}
+          >
             <option value="">None</option>
             {funds.map((f) => (
               <option key={f.id} value={f.id}>
@@ -109,35 +147,37 @@ export function ExpenseForm({
             name="merchant"
             type="text"
             placeholder="e.g. Ranch Market"
+            defaultValue={defaults?.merchant ?? ""}
             className={inputClass}
           />
         </FormField>
 
         <FormField label="Note (optional)" htmlFor="note">
-          <textarea id="note" name="note" className={textareaClass} />
+          <textarea
+            id="note"
+            name="note"
+            defaultValue={defaults?.note ?? ""}
+            className={textareaClass}
+          />
         </FormField>
 
-        <SubmitBar label="Save expense" />
+        <div className="mt-2 flex gap-2">
+          <button
+            type="submit"
+            className="flex-1 rounded-xl bg-foreground py-3 text-sm font-medium text-background"
+          >
+            {submitLabel}
+          </button>
+          <Link
+            href={cancelHref}
+            className="rounded-xl bg-surface-tint px-5 py-3 text-sm font-medium text-muted-strong"
+          >
+            Cancel
+          </Link>
+        </div>
       </form>
-    </Card>
-  );
-}
 
-function SubmitBar({ label }: { label: string }) {
-  return (
-    <div className="mt-2 flex gap-2">
-      <button
-        type="submit"
-        className="flex-1 rounded-xl bg-foreground py-3 text-sm font-medium text-background"
-      >
-        {label}
-      </button>
-      <Link
-        href="/transactions"
-        className="rounded-xl bg-surface-tint px-5 py-3 text-sm font-medium text-muted-strong"
-      >
-        Cancel
-      </Link>
-    </div>
+      {extraPendingSlot}
+    </Card>
   );
 }

@@ -1,20 +1,44 @@
 import Link from "next/link";
 
-import { Card } from "@/components/ui/Card";
-import { FormField, inputClass, selectClass, textareaClass } from "@/components/ui/FormField";
 import { createCreditCardPaymentAction } from "@/app/transactions/actions";
+import { Card } from "@/components/ui/Card";
+import {
+  FormField,
+  inputClass,
+  selectClass,
+  textareaClass,
+} from "@/components/ui/FormField";
 import type { AccountOption } from "@/lib/transactions-data";
+
+export interface CreditCardPaymentDefaults {
+  amount?: number;
+  fromAccountId?: string;
+  creditCardAccountId?: string;
+  note?: string;
+}
 
 // CC payments deliberately expose NO category/fund fields. Paying down a card
 // is not spending (docs/financial-logic.md §5). The action calls
-// `createCreditCardPayment`, which can only ever produce a transaction of
-// type 'credit_card_payment' — never an expense.
+// `createCreditCardPayment` (or `updateCreditCardPayment`), which can only
+// ever produce a transaction of type 'credit_card_payment' — never an expense.
 export function CreditCardPaymentForm({
   accounts,
   defaultDate,
+  defaults,
+  action = createCreditCardPaymentAction,
+  transactionId,
+  submitLabel = "Save payment",
+  cancelHref = "/transactions",
+  extraPendingSlot,
 }: {
   accounts: AccountOption[];
   defaultDate: string;
+  defaults?: CreditCardPaymentDefaults;
+  action?: (fd: FormData) => Promise<void>;
+  transactionId?: string;
+  submitLabel?: string;
+  cancelHref?: string;
+  extraPendingSlot?: React.ReactNode;
 }) {
   const bankAccounts = accounts.filter((a) => a.type !== "credit");
   const creditCards = accounts.filter((a) => a.type === "credit");
@@ -31,16 +55,17 @@ export function CreditCardPaymentForm({
             : "No bank or cash account available to pay from."}
         </p>
       ) : (
-        <form
-          action={createCreditCardPaymentAction}
-          className="flex flex-col gap-4"
-        >
+        <form action={action} className="flex flex-col gap-4">
+          {transactionId ? (
+            <input type="hidden" name="transactionId" value={transactionId} />
+          ) : null}
+
           <FormField label="Pay from account" htmlFor="fromAccountId">
             <select
               id="fromAccountId"
               name="fromAccountId"
               required
-              defaultValue=""
+              defaultValue={defaults?.fromAccountId ?? ""}
               className={selectClass}
             >
               <option value="" disabled>
@@ -59,7 +84,7 @@ export function CreditCardPaymentForm({
               id="creditCardAccountId"
               name="creditCardAccountId"
               required
-              defaultValue=""
+              defaultValue={defaults?.creditCardAccountId ?? ""}
               className={selectClass}
             >
               <option value="" disabled>
@@ -83,6 +108,7 @@ export function CreditCardPaymentForm({
               step="1"
               required
               placeholder="0"
+              defaultValue={defaults?.amount ?? ""}
               className={inputClass}
             />
           </FormField>
@@ -99,7 +125,12 @@ export function CreditCardPaymentForm({
           </FormField>
 
           <FormField label="Note (optional)" htmlFor="note">
-            <textarea id="note" name="note" className={textareaClass} />
+            <textarea
+              id="note"
+              name="note"
+              defaultValue={defaults?.note ?? ""}
+              className={textareaClass}
+            />
           </FormField>
 
           <p className="rounded-xl bg-surface-tint px-3 py-2 text-[11px] text-muted">
@@ -112,10 +143,10 @@ export function CreditCardPaymentForm({
               type="submit"
               className="flex-1 rounded-xl bg-foreground py-3 text-sm font-medium text-background"
             >
-              Save payment
+              {submitLabel}
             </button>
             <Link
-              href="/transactions"
+              href={cancelHref}
               className="rounded-xl bg-surface-tint px-5 py-3 text-sm font-medium text-muted-strong"
             >
               Cancel
@@ -123,6 +154,8 @@ export function CreditCardPaymentForm({
           </div>
         </form>
       )}
+
+      {extraPendingSlot}
     </Card>
   );
 }

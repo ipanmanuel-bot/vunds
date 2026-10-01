@@ -1,26 +1,53 @@
 import Link from "next/link";
 
-import { Card } from "@/components/ui/Card";
-import { FormField, inputClass, selectClass, textareaClass } from "@/components/ui/FormField";
 import { createIncomeAction } from "@/app/transactions/actions";
+import { Card } from "@/components/ui/Card";
+import {
+  FormField,
+  inputClass,
+  selectClass,
+  textareaClass,
+} from "@/components/ui/FormField";
 import type { AccountOption, CategoryOption } from "@/lib/transactions-data";
+
+export interface IncomeDefaults {
+  amount?: number;
+  accountId?: string;
+  categoryId?: string;
+  note?: string;
+}
 
 export function IncomeForm({
   accounts,
   categories,
   defaultDate,
+  defaults,
+  action = createIncomeAction,
+  transactionId,
+  submitLabel = "Save income",
+  cancelHref = "/transactions",
+  extraPendingSlot,
 }: {
   accounts: AccountOption[];
   categories: CategoryOption[];
   defaultDate: string;
+  defaults?: IncomeDefaults;
+  action?: (fd: FormData) => Promise<void>;
+  transactionId?: string;
+  submitLabel?: string;
+  cancelHref?: string;
+  extraPendingSlot?: React.ReactNode;
 }) {
-  // Only debit/cash accounts are sensible destinations for income.
   const destinationAccounts = accounts.filter((a) => a.type !== "credit");
   const incomeCategories = categories.filter((c) => c.kind === "income");
 
   return (
     <Card className="p-5">
-      <form action={createIncomeAction} className="flex flex-col gap-4">
+      <form action={action} className="flex flex-col gap-4">
+        {transactionId ? (
+          <input type="hidden" name="transactionId" value={transactionId} />
+        ) : null}
+
         <FormField label="Amount (IDR)" htmlFor="amount">
           <input
             id="amount"
@@ -31,6 +58,7 @@ export function IncomeForm({
             step="1"
             required
             placeholder="0"
+            defaultValue={defaults?.amount ?? ""}
             className={inputClass}
           />
         </FormField>
@@ -40,7 +68,7 @@ export function IncomeForm({
             id="accountId"
             name="accountId"
             required
-            defaultValue=""
+            defaultValue={defaults?.accountId ?? ""}
             className={selectClass}
           >
             <option value="" disabled>
@@ -59,7 +87,7 @@ export function IncomeForm({
             id="categoryId"
             name="categoryId"
             required
-            defaultValue=""
+            defaultValue={defaults?.categoryId ?? ""}
             className={selectClass}
           >
             <option value="" disabled>
@@ -85,7 +113,12 @@ export function IncomeForm({
         </FormField>
 
         <FormField label="Note (optional)" htmlFor="note">
-          <textarea id="note" name="note" className={textareaClass} />
+          <textarea
+            id="note"
+            name="note"
+            defaultValue={defaults?.note ?? ""}
+            className={textareaClass}
+          />
         </FormField>
 
         <div className="mt-2 flex gap-2">
@@ -93,16 +126,18 @@ export function IncomeForm({
             type="submit"
             className="flex-1 rounded-xl bg-foreground py-3 text-sm font-medium text-background"
           >
-            Save income
+            {submitLabel}
           </button>
           <Link
-            href="/transactions"
+            href={cancelHref}
             className="rounded-xl bg-surface-tint px-5 py-3 text-sm font-medium text-muted-strong"
           >
             Cancel
           </Link>
         </div>
       </form>
+
+      {extraPendingSlot}
     </Card>
   );
 }

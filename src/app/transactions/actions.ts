@@ -136,3 +136,167 @@ export async function createCreditCardPaymentAction(
   await insertTransaction(tx);
   redirect("/transactions");
 }
+
+// =========================================================================
+// Update actions — one per editable type. Each uses the same finance factory
+// as creation to validate shape, then issues an UPDATE for just that row.
+// `intent=confirm` on a pending transaction also flips status to 'confirmed'.
+// =========================================================================
+
+async function readCurrentStatus(id: string): Promise<string> {
+  const rows = await sql<{ status: string }[]>`
+    select status from transactions
+    where household_id = ${DEV_HOUSEHOLD_ID} and id = ${id}
+  `;
+  if (!rows[0]) throw new Error("Transaction not found");
+  return rows[0].status;
+}
+
+function nextStatus(current: string, intent: string | undefined): string {
+  if (intent === "confirm" && current === "pending") return "confirmed";
+  return current;
+}
+
+function invalidate(id: string): void {
+  revalidatePath("/transactions");
+  revalidatePath(`/transactions/${id}`);
+  revalidatePath("/");
+  revalidatePath("/inbox");
+}
+
+export async function updateExpenseAction(formData: FormData): Promise<void> {
+  const id = str(formData, "transactionId");
+  const intent = optionalStr(formData, "intent");
+  const current = await readCurrentStatus(id);
+
+  // Factory re-validates the shape — guarantees category_id present,
+  // positive amount, etc., for the final (confirmed) state.
+  const tx = createExpense({
+    id,
+    amount: num(formData, "amount"),
+    accountId: str(formData, "accountId"),
+    categoryId: str(formData, "categoryId"),
+    fundId: optionalStr(formData, "fundId"),
+    transactionDate: date(formData, "transactionDate"),
+    merchant: optionalStr(formData, "merchant"),
+    note: optionalStr(formData, "note"),
+  });
+  const dateStr = tx.transactionDate.toISOString().slice(0, 10);
+
+  await sql`
+    update transactions set
+      amount           = ${tx.amount},
+      transaction_date = ${dateStr},
+      account_id       = ${tx.accountId ?? null},
+      category_id      = ${tx.categoryId ?? null},
+      fund_id          = ${tx.fundId ?? null},
+      merchant         = ${tx.merchant ?? null},
+      note             = ${tx.note ?? null},
+      status           = ${nextStatus(current, intent)}
+    where household_id = ${DEV_HOUSEHOLD_ID} and id = ${id}
+  `;
+  invalidate(id);
+  redirect(`/transactions/${id}`);
+}
+
+export async function updateIncomeAction(formData: FormData): Promise<void> {
+  const id = str(formData, "transactionId");
+  const intent = optionalStr(formData, "intent");
+  const current = await readCurrentStatus(id);
+
+  const tx = createIncome({
+    id,
+    amount: num(formData, "amount"),
+    accountId: str(formData, "accountId"),
+    categoryId: str(formData, "categoryId"),
+    transactionDate: date(formData, "transactionDate"),
+    note: optionalStr(formData, "note"),
+  });
+  const dateStr = tx.transactionDate.toISOString().slice(0, 10);
+
+  await sql`
+    update transactions set
+      amount           = ${tx.amount},
+      transaction_date = ${dateStr},
+      account_id       = ${tx.accountId ?? null},
+      category_id      = ${tx.categoryId ?? null},
+      note             = ${tx.note ?? null},
+      status           = ${nextStatus(current, intent)}
+    where household_id = ${DEV_HOUSEHOLD_ID} and id = ${id}
+  `;
+  invalidate(id);
+  redirect(`/transactions/${id}`);
+}
+
+export async function updateTransferAction(formData: FormData): Promise<void> {
+  const id = str(formData, "transactionId");
+  const intent = optionalStr(formData, "intent");
+  const current = await readCurrentStatus(id);
+
+  const tx = createTransfer({
+    id,
+    amount: num(formData, "amount"),
+    fromAccountId: str(formData, "fromAccountId"),
+    toAccountId: str(formData, "toAccountId"),
+    transactionDate: date(formData, "transactionDate"),
+    note: optionalStr(formData, "note"),
+  });
+  const dateStr = tx.transactionDate.toISOString().slice(0, 10);
+
+  await sql`
+    update transactions set
+      amount             = ${tx.amount},
+      transaction_date   = ${dateStr},
+      account_id         = ${tx.accountId ?? null},
+      counter_account_id = ${tx.counterAccountId ?? null},
+      note               = ${tx.note ?? null},
+      status             = ${nextStatus(current, intent)}
+    where household_id = ${DEV_HOUSEHOLD_ID} and id = ${id}
+  `;
+  invalidate(id);
+  redirect(`/transactions/${id}`);
+}
+
+export async function updateCreditCardPaymentAction(
+  formData: FormData,
+): Promise<void> {
+  const id = str(formData, "transactionId");
+  const intent = optionalStr(formData, "intent");
+  const current = await readCurrentStatus(id);
+
+  // Factory enforces type='credit_card_payment' — this update can never
+  // transform a CC payment into an expense, matching the invariant that
+  // paying a card does NOT count toward monthly spending.
+  const tx = createCreditCardPayment({
+    id,
+    amount: num(formData, "amount"),
+    fromAccountId: str(formData, "fromAccountId"),
+    creditCardAccountId: str(formData, "creditCardAccountId"),
+    transactionDate: date(formData, "transactionDate"),
+    note: optionalStr(formData, "note"),
+  });
+  const dateStr = tx.transactionDate.toISOString().slice(0, 10);
+
+  await sql`
+    update transactions set
+      amount             = ${tx.amount},
+      transaction_date   = ${dateStr},
+      account_id         = ${tx.accountId ?? null},
+      counter_account_id = ${tx.counterAccountId ?? null},
+      note               = ${tx.note ?? null},
+      status             = ${nextStatus(current, intent)}
+    where household_id = ${DEV_HOUSEHOLD_ID} and id = ${id}
+  `;
+  invalidate(id);
+  redirect(`/transactions/${id}`);
+}
+
+export async function rejectTransactionAction(formData: FormData): Promise<void> {
+  const id = str(formData, "transactionId");
+  await sql`
+    update transactions set status = 'rejected'
+    where household_id = ${DEV_HOUSEHOLD_ID} and id = ${id} and status = 'pending'
+  `;
+  invalidate(id);
+  redirect("/transactions");
+}

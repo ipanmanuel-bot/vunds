@@ -157,6 +157,12 @@ export async function listTransactions(
 
 export interface TransactionDetail extends TransactionListItem {
   currency: string;
+  // Raw IDs — needed to prefill the edit form.
+  accountId: string | null;
+  counterAccountId: string | null;
+  categoryId: string | null;
+  fundId: string | null;
+  counterFundId: string | null;
   createdByName: string | null;
   refundOfId: string | null;
   refundOfMerchant: string | null;
@@ -203,6 +209,11 @@ export async function getTransaction(
   return {
     ...toItem(r),
     currency: r.currency,
+    accountId: r.account_id,
+    counterAccountId: r.counter_account_id,
+    categoryId: r.category_id,
+    fundId: r.fund_id,
+    counterFundId: r.counter_fund_id,
     createdByName: r.created_by_name,
     refundOfId: r.refund_of_transaction_id,
     refundOfMerchant: r.refund_of_merchant,
