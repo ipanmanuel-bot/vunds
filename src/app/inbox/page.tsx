@@ -1,4 +1,3 @@
-import { BottomNav } from "@/components/BottomNav";
 import { GmailStatus } from "@/components/inbox/GmailStatus";
 import { InboxItem } from "@/components/inbox/InboxItem";
 import { Card } from "@/components/ui/Card";
@@ -125,8 +124,6 @@ export default async function InboxPage({
           )}
         </main>
       </div>
-
-      <BottomNav activeHref={null} />
     </div>
   );
 }

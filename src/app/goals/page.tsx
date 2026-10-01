@@ -1,4 +1,3 @@
-import { BottomNav } from "@/components/BottomNav";
 import { FundSummaryCard } from "@/components/funds/FundSummaryCard";
 import { listFunds } from "@/lib/funds-data";
 
@@ -29,8 +28,6 @@ export default async function GoalsPage() {
           )}
         </main>
       </div>
-
-      <BottomNav activeHref="/goals" />
     </div>
   );
 }

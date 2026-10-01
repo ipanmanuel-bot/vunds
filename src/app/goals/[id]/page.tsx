@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { BottomNav } from "@/components/BottomNav";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
@@ -88,8 +87,6 @@ export default async function FundDetailPage({
           </section>
         </main>
       </div>
-
-      <BottomNav activeHref="/goals" />
     </div>
   );
 }

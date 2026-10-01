@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { BottomNav } from "@/components/BottomNav";
 import { FilterBar } from "@/components/transactions/FilterBar";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { DEV_PERIOD } from "@/lib/dev";
@@ -51,8 +50,6 @@ export default async function TransactionsPage({
           <TransactionList items={items} />
         </main>
       </div>
-
-      <BottomNav activeHref="/transactions" />
     </div>
   );
 }

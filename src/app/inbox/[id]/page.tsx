@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { BottomNav } from "@/components/BottomNav";
 import { ConfirmForm } from "@/components/inbox/ConfirmForm";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
@@ -91,8 +90,6 @@ export default async function PendingDetailPage({
           />
         </main>
       </div>
-
-      <BottomNav activeHref={null} />
     </div>
   );
 }

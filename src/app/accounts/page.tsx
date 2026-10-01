@@ -1,4 +1,3 @@
-import { BottomNav } from "@/components/BottomNav";
 import { AccountSummaryCard } from "@/components/accounts/AccountSummaryCard";
 import { listAccounts, type AccountSummary } from "@/lib/accounts-data";
 
@@ -45,8 +44,6 @@ export default async function AccountsPage() {
           })}
         </main>
       </div>
-
-      <BottomNav activeHref="/accounts" />
     </div>
   );
 }

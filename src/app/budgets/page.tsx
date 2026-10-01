@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { BottomNav } from "@/components/BottomNav";
 import { BudgetRow } from "@/components/budgets/BudgetRow";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
@@ -174,8 +173,6 @@ export default async function BudgetsPage({
           </Card>
         </main>
       </div>
-
-      <BottomNav activeHref={null} />
     </div>
   );
 }

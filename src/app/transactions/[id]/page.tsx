@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { ArrowRightIcon } from "@/components/ui/icons";
@@ -123,8 +122,6 @@ export default async function TransactionDetailPage({
           </Card>
         </main>
       </div>
-
-      <BottomNav activeHref="/transactions" />
     </div>
   );
 }

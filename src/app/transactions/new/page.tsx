@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { BottomNav } from "@/components/BottomNav";
 import { CreditCardPaymentForm } from "@/components/transactions/CreditCardPaymentForm";
 import { ExpenseForm } from "@/components/transactions/ExpenseForm";
 import { IncomeForm } from "@/components/transactions/IncomeForm";
@@ -68,8 +67,6 @@ export default async function NewTransactionPage({
           )}
         </main>
       </div>
-
-      <BottomNav activeHref="/transactions" />
     </div>
   );
 }

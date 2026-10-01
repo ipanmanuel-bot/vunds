@@ -1,4 +1,3 @@
-import { BottomNav } from "@/components/BottomNav";
 import { AccountsRail } from "@/components/dashboard/AccountsRail";
 import { BudgetHero } from "@/components/dashboard/BudgetHero";
 import { FundList } from "@/components/dashboard/FundList";
@@ -32,8 +31,6 @@ export default async function DashboardPage() {
           <MoneyInbox pendingCount={data.pendingCount} />
         </main>
       </div>
-
-      <BottomNav activeHref="/" />
     </div>
   );
 }
