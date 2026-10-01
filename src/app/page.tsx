@@ -22,13 +22,18 @@ export default async function DashboardPage() {
           periodLabel={periodLabel}
         />
 
+        {/* Order per product-spec hierarchy, adjusted for attention weight:
+            Remaining budget is still the hero (#1 question of the dashboard),
+            Money Inbox follows because pending items need review before they
+            touch anything downstream. Spending comparison drops to last — it
+            is useful historical context but needs no immediate action. */}
         <main className="mt-6 flex flex-col gap-5">
           <BudgetHero budget={data.budget} periodLabel={periodLabel} />
-          <SpendingBars bars={data.spendingComparison} />
+          <MoneyInbox pendingCount={data.pendingCount} />
           <AccountsRail accounts={data.accounts} />
           <FundList funds={data.funds} />
           <RecentTransactions items={data.recentTransactions} />
-          <MoneyInbox pendingCount={data.pendingCount} />
+          <SpendingBars bars={data.spendingComparison} />
         </main>
       </div>
     </div>
