@@ -128,9 +128,35 @@ export async function renameCategoryAction(formData: FormData): Promise<void> {
 //
 // Archiving a top-level category also archives its subcategories, since a
 // subcategory without a visible parent would be orphaned in the UI.
+//
+// Guard: refuse to archive if any transaction (in this category OR any
+// descendant) references the category. The client already prevents the
+// confirm dialog from opening when the server-rendered count is > 0; this
+// is defense in depth against races and tampering.
 // =========================================================================
 export async function archiveCategoryAction(formData: FormData): Promise<void> {
   const id = str(formData, "id");
+
+  const rows = await sql<{ count: string }[]>`
+    with recursive descendants as (
+      select id from categories
+      where household_id = ${DEV_HOUSEHOLD_ID} and id = ${id}
+      union all
+      select c.id from categories c
+      join descendants d on c.parent_id = d.id
+      where c.household_id = ${DEV_HOUSEHOLD_ID}
+    )
+    select count(*)::text as count
+    from transactions t
+    where t.household_id = ${DEV_HOUSEHOLD_ID}
+      and t.category_id in (select id from descendants)
+  `;
+  const count = Number(rows[0]?.count ?? 0);
+  if (count > 0) {
+    throw new Error(
+      `Cannot archive: ${count} transaction(s) still reference this category or its subcategories.`,
+    );
+  }
 
   await sql.begin(async (db) => {
     await db`
@@ -144,7 +170,6 @@ export async function archiveCategoryAction(formData: FormData): Promise<void> {
   });
 
   invalidate();
-  redirect("/categories");
 }
 
 // Intentional stub kept to document the "unarchive" path; not wired to the UI

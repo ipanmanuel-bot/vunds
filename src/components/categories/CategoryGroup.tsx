@@ -2,10 +2,8 @@
 
 import { useState } from "react";
 
-import {
-  archiveCategoryAction,
-  createSubcategoryAction,
-} from "@/app/categories/actions";
+import { createSubcategoryAction } from "@/app/categories/actions";
+import { ArchiveButton } from "@/components/categories/ArchiveButton";
 import { AutosaveName } from "@/components/categories/AutosaveName";
 import { Pill } from "@/components/ui/Pill";
 import { ChevronDownIcon } from "@/components/ui/icons";
@@ -26,9 +24,15 @@ export function CategoryGroup({
       ? "1 subcategory"
       : `${childRows.length} subcategories`;
 
+  // Parent is blocked from archive if the parent itself OR any subcategory
+  // has transactions attached, since archive cascades to subcategories.
+  const parentTotalTransactions =
+    parent.transactionCount +
+    childRows.reduce((sum, c) => sum + c.transactionCount, 0);
+
   return (
     <div className="rounded-[var(--radius-card)] bg-surface shadow-[0_1px_2px_rgba(15,42,31,0.04),0_8px_24px_-12px_rgba(15,42,31,0.08)]">
-      {/* Header row — click to toggle open/close */}
+      {/* Header row */}
       <div className="flex items-start gap-3 p-5">
         <button
           type="button"
@@ -60,24 +64,12 @@ export function CategoryGroup({
           </p>
         </div>
 
-        <form action={archiveCategoryAction} className="shrink-0">
-          <input type="hidden" name="id" value={parent.id} />
-          <button
-            type="submit"
-            onClick={(e) => {
-              if (
-                !window.confirm(
-                  `Archive "${parent.name}" and all its subcategories? Existing transactions keep their reference; this just hides the category from new-transaction forms.`,
-                )
-              ) {
-                e.preventDefault();
-              }
-            }}
-            className="rounded-xl bg-surface-tint px-3 py-1.5 text-[11px] font-medium text-[color:var(--danger)]"
-          >
-            Archive
-          </button>
-        </form>
+        <ArchiveButton
+          categoryId={parent.id}
+          categoryName={parent.name}
+          transactionCount={parentTotalTransactions}
+          isParent={true}
+        />
       </div>
 
       {open ? (
@@ -116,15 +108,12 @@ function ChildRow({ row }: { row: CategoryManagementRow }) {
           {row.transactionCount === 1 ? "" : "s"}
         </p>
       </div>
-      <form action={archiveCategoryAction} className="shrink-0">
-        <input type="hidden" name="id" value={row.id} />
-        <button
-          type="submit"
-          className="rounded-xl bg-surface-tint px-3 py-1.5 text-[11px] font-medium text-[color:var(--danger)]"
-        >
-          Archive
-        </button>
-      </form>
+      <ArchiveButton
+        categoryId={row.id}
+        categoryName={row.name}
+        transactionCount={row.transactionCount}
+        isParent={false}
+      />
     </li>
   );
 }

@@ -128,3 +128,11 @@ export function ChevronDownIcon(p: IconProps) {
     </svg>
   );
 }
+
+export function XIcon(p: IconProps) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M18 6L6 18M6 6l12 12" />
+    </svg>
+  );
+}
