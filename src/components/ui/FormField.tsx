@@ -22,10 +22,12 @@ export function FormField({
   );
 }
 
-// text-base (16px) is intentional — anything smaller triggers iOS Safari's
-// focus auto-zoom, which we disabled at the viewport level for a11y reasons.
+// text-sm (14px) to match the Apply button and other UI text. Trade-off:
+// iOS Safari will auto-zoom when the user focuses an input (fired for any
+// font-size < 16px). Acceptable for now; revisit if the zoom becomes
+// annoying on mobile.
 const base =
-  "block w-full rounded-xl bg-surface px-4 py-3 text-base text-foreground " +
+  "block w-full rounded-xl bg-surface px-4 py-3 text-sm text-foreground " +
   "shadow-[inset_0_0_0_1px_var(--border)] " +
   "placeholder:text-muted outline-none focus:shadow-[inset_0_0_0_2px_var(--accent-strong)]";
 
