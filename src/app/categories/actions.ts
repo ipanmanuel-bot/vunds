@@ -101,10 +101,14 @@ export async function createSubcategoryAction(
 
 // =========================================================================
 // Rename
+//
+// No redirect — this action is called from a client component on every
+// debounced blur/Enter during autosave, so we only revalidate and return.
 // =========================================================================
 export async function renameCategoryAction(formData: FormData): Promise<void> {
   const id = str(formData, "id");
   const name = str(formData, "name").trim();
+  if (!name) return;
 
   await sql`
     update categories
@@ -113,7 +117,6 @@ export async function renameCategoryAction(formData: FormData): Promise<void> {
   `;
 
   invalidate();
-  redirect("/categories");
 }
 
 // =========================================================================
