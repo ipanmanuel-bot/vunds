@@ -44,6 +44,11 @@ body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Kill the double-tap-to-zoom gesture (and the 300ms click delay that
+     comes with it) while keeping pinch-to-zoom alive for accessibility.
+     Prevents a stray double-tap on a card or button from zooming in on
+     part of the UI. */
+  touch-action: manipulation;
 }
 
 /* Hide scrollbars on horizontal rails (used by AccountsRail) while keeping
