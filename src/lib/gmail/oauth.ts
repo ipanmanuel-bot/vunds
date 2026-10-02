@@ -35,8 +35,11 @@ export function readOAuthEnv(): OAuthEnv {
 }
 
 // Build the Google authorization URL. `access_type=offline` + `prompt=consent`
-// ensures we get a refresh token on first consent. `state` is a one-time CSRF
-// nonce (the callback must verify it against the cookie we set).
+// ensures we get a refresh token on consent. `prompt=select_account` forces
+// Google to show the account picker — important when the user already has
+// one Gmail connected and wants to add a second one from a different inbox.
+// `state` is a one-time CSRF nonce (the callback verifies it against the
+// httpOnly cookie we set).
 export function buildAuthorizationUrl(env: OAuthEnv, state: string): string {
   const params = new URLSearchParams({
     client_id: env.clientId,
@@ -44,7 +47,7 @@ export function buildAuthorizationUrl(env: OAuthEnv, state: string): string {
     response_type: "code",
     scope: GOOGLE_SCOPE,
     access_type: "offline",
-    prompt: "consent",
+    prompt: "select_account consent",
     include_granted_scopes: "true",
     state,
   });

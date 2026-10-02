@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 
 import { sql } from "@/lib/db";
 import { DEV_HOUSEHOLD_ID, DEV_VIEWER } from "@/lib/dev";
-import { deleteTokens } from "@/lib/gmail-tokens";
+import { deleteTokenById } from "@/lib/gmail-tokens";
 import { syncFixtures, syncGmail, type SyncResult } from "@/lib/gmail/sync";
 
 // =========================================================================
@@ -128,8 +128,11 @@ export async function syncFixturesAction(): Promise<void> {
   redirect(`/inbox?sync=${encodeURIComponent(encodeResult("fixtures", r))}`);
 }
 
-export async function disconnectGmailAction(): Promise<void> {
-  await deleteTokens();
+export async function disconnectGmailAction(formData: FormData): Promise<void> {
+  // Each connection is identified by its token-row id so the user can remove
+  // one Gmail while keeping another connected.
+  const tokenId = str(formData, "tokenId");
+  await deleteTokenById(tokenId);
   revalidatePath("/inbox");
   redirect("/inbox?gmail=disconnected");
 }

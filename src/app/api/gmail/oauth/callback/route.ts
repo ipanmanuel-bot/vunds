@@ -41,7 +41,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // `expires_in` is seconds from now.
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
+    // We NEED the email to key the stored token row — it's part of the
+    // uniqueness constraint since we support multiple Gmail connections.
     const email = await fetchGoogleEmail(tokens.access_token).catch(() => null);
+    if (!email) {
+      console.error("Gmail OAuth: couldn't fetch user email after exchange");
+      return NextResponse.redirect(
+        new URL("/inbox?gmail=no_email", url.origin),
+      );
+    }
 
     await saveTokens({
       accessToken: tokens.access_token,
@@ -51,7 +59,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       accountEmail: email,
     });
 
-    const res = NextResponse.redirect(new URL("/inbox?gmail=connected", url.origin));
+    const res = NextResponse.redirect(
+      new URL(
+        `/inbox?gmail=connected&email=${encodeURIComponent(email)}`,
+        url.origin,
+      ),
+    );
     res.cookies.set("gmail_oauth_state", "", {
       path: "/api/gmail/oauth",
       maxAge: 0,

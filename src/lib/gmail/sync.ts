@@ -17,7 +17,7 @@ import { randomUUID } from "node:crypto";
 
 import { sql } from "../db";
 import { DEV_HOUSEHOLD_ID } from "../dev";
-import { getTokens } from "../gmail-tokens";
+import { listTokens } from "../gmail-tokens";
 import { findParser } from "../parsers/registry";
 import type { ParsedTransaction } from "../parsers/types";
 import {
@@ -186,44 +186,52 @@ async function processMessages(
 export async function syncGmail(
   householdId = DEV_HOUSEHOLD_ID,
 ): Promise<SyncResult> {
-  const tokens = await getTokens({ householdId });
-  if (!tokens) {
+  const connections = await listTokens({ householdId });
+  if (connections.length === 0) {
     return {
       ...EMPTY_RESULT,
-      errors: ["Gmail is not connected. Click 'Connect Gmail' first."],
+      errors: ["No Gmail connected. Click 'Connect Gmail' first."],
     };
   }
 
-  const client = new GmailClient(tokens);
   const query = buildQuery({ fromHints: BANK_FROM_HINTS });
+  const allMessages: FlattenedMessage[] = [];
+  const errors: string[] = [];
 
-  let ids: string[];
-  try {
-    ids = await client.listMessages(query, 50);
-  } catch (e) {
-    return {
-      ...EMPTY_RESULT,
-      errors: [
-        `Gmail list failed: ${e instanceof Error ? e.message : String(e)}`,
-      ],
-    };
-  }
+  // One mailbox at a time. We DON'T parallelise — Google rate-limits per
+  // user, and a 2-mailbox household doesn't need the extra complexity.
+  for (const token of connections) {
+    const client = new GmailClient(token);
 
-  const messages: FlattenedMessage[] = [];
-  for (const id of ids) {
+    let ids: string[];
     try {
-      const res = await client.getMessage(id);
-      messages.push(flattenMessage(res));
+      ids = await client.listMessages(query, 50);
     } catch (e) {
-      // Skip individual-message failures so one bad mail doesn't abort sync.
-      // We intentionally do NOT log bodies; only the id so we can retry.
-      console.error(
-        `Gmail get failed for ${id}: ${e instanceof Error ? e.message : e}`,
+      errors.push(
+        `[${token.accountEmail}] Gmail list failed: ${
+          e instanceof Error ? e.message : String(e)
+        }`,
       );
+      continue;
+    }
+
+    for (const id of ids) {
+      try {
+        const res = await client.getMessage(id);
+        allMessages.push(flattenMessage(res));
+      } catch (e) {
+        console.error(
+          `Gmail get failed for ${token.accountEmail}/${id}: ${
+            e instanceof Error ? e.message : e
+          }`,
+        );
+      }
     }
   }
 
-  return processMessages(messages, householdId);
+  const result = await processMessages(allMessages, householdId);
+  result.errors.push(...errors);
+  return result;
 }
 
 export async function syncFixtures(

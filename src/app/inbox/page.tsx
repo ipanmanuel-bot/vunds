@@ -1,7 +1,7 @@
-import { GmailStatus } from "@/components/inbox/GmailStatus";
+import { GmailConnections } from "@/components/inbox/GmailConnections";
 import { InboxItem } from "@/components/inbox/InboxItem";
 import { Card } from "@/components/ui/Card";
-import { getTokens } from "@/lib/gmail-tokens";
+import { listTokens } from "@/lib/gmail-tokens";
 import { listPending } from "@/lib/inbox-data";
 
 export const dynamic = "force-dynamic";
@@ -30,8 +30,12 @@ function parseFlash(sp: Record<string, string | string[] | undefined>): {
   }
 
   const gmail = first(sp.gmail);
+  const email = first(sp.email);
   if (gmail === "connected") {
-    return { kind: "oauth", message: "Gmail connected." };
+    return {
+      kind: "oauth",
+      message: email ? `Gmail connected: ${email}` : "Gmail connected.",
+    };
   }
   if (gmail === "disconnected") {
     return { kind: "oauth", message: "Gmail disconnected. Tokens removed." };
@@ -58,8 +62,13 @@ export default async function InboxPage({
 
   const [items, tokens] = await Promise.all([
     listPending(),
-    getTokens().catch(() => null),
+    listTokens().catch(() => []),
   ]);
+  const connections = tokens.map((t) => ({
+    id: t.id,
+    accountEmail: t.accountEmail,
+    scope: t.scope,
+  }));
 
   const needsCategory = items.filter((i) => i.suggestion == null);
   const suggested = items.filter((i) => i.suggestion != null);
@@ -79,12 +88,10 @@ export default async function InboxPage({
         </header>
 
         <main className="mt-5 flex flex-col gap-5">
-          <GmailStatus
-            connected={tokens != null}
-            accountEmail={tokens?.accountEmail ?? null}
-            tokenScope={tokens?.scope ?? null}
+          <GmailConnections
+            connections={connections}
             oauthReady={oauthReady}
-            flash={flash}
+            flash={{ message: flash.message }}
           />
 
           {items.length === 0 ? (
