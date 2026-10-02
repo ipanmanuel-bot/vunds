@@ -110,14 +110,18 @@ export async function refreshAccessToken(
   return (await res.json()) as TokenResponse;
 }
 
-// Fetch the user's primary email address. Used only to display "Connected as
-// X" in the UI; we never surface tokens.
+// Fetch the connected Gmail's primary email address.
+//
+// Uses the Gmail API's own `users.getProfile` endpoint rather than
+// /oauth2/v2/userinfo — the userinfo endpoint requires the `email` or
+// `openid` scope, which we deliberately don't request. getProfile only
+// needs `gmail.readonly`, which we already have.
 export async function fetchGoogleEmail(accessToken: string): Promise<string | null> {
   const res = await fetch(
-    "https://www.googleapis.com/oauth2/v2/userinfo",
+    "https://gmail.googleapis.com/gmail/v1/users/me/profile",
     { headers: { Authorization: `Bearer ${accessToken}` } },
   );
   if (!res.ok) return null;
-  const data = (await res.json()) as { email?: string };
-  return data.email ?? null;
+  const data = (await res.json()) as { emailAddress?: string };
+  return data.emailAddress ?? null;
 }
