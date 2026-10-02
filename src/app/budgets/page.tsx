@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { ArrowRightIcon } from "@/components/ui/icons";
-import { DEV_PERIOD } from "@/lib/dev";
+import { currentPeriod } from "@/lib/dev";
 import {
   getBudget,
   listBudgetPeriods,
@@ -38,7 +38,7 @@ export default async function BudgetsPage({
 }) {
   const sp = await searchParams;
   const raw = Array.isArray(sp.period) ? sp.period[0] : sp.period;
-  const period = parsePeriod(raw) ?? DEV_PERIOD;
+  const period = parsePeriod(raw) ?? currentPeriod();
 
   const [budget, periods, monthExpenseTotal] = await Promise.all([
     getBudget(period.year, period.month),

@@ -1,6 +1,6 @@
 import { buildChildrenMap, getDescendantIds } from "./categories";
 import { sql } from "./db";
-import { DEV_HOUSEHOLD_ID, DEV_PERIOD } from "./dev";
+import { DEV_HOUSEHOLD_ID, currentPeriod } from "./dev";
 import {
   type Account,
   type Transaction,
@@ -146,7 +146,7 @@ export interface DashboardData {
 // =========================================================================
 
 export async function loadDashboard(
-  period = DEV_PERIOD,
+  period = currentPeriod(),
   householdId = DEV_HOUSEHOLD_ID,
 ): Promise<DashboardData> {
   const [

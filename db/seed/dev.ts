@@ -1,14 +1,16 @@
-// Development seed data for the "Ivan & Vero (dev)" household.
+// ⚠ WARNING — this script WIPES the Ivan & Vero household and replaces its
+// contents with demo data (fake accounts, transactions, funds, budgets,
+// merchant rules, pending imports). It is DESTRUCTIVE and should only be
+// run against a disposable environment.
 //
-// Separation from production data:
-//   * All seed UUIDs begin with "deadbeef-" so you can grep for them:
-//       select * from accounts where id::text like 'deadbeef%';
-//   * The household is explicitly named "Ivan & Vero (dev)".
-//   * Seed users use `*-dev@vunds.local` emails — distinct from any real
-//     Google-OAuth user that signs in later.
-//   * This script is idempotent: it wipes the dev household (cascading all
-//     scoped rows via FKs) and reloads fresh. Running it never touches any
-//     other household or any non-seed rows.
+// The npm script is intentionally named `pnpm db:seed-demo` (not `db:seed`)
+// so you don't trigger it from muscle memory.
+//
+// Separation markers (for forensic ID of demo rows if they ever get mixed
+// with real data):
+//   * All UUIDs begin with "deadbeef-"
+//   * Household gets renamed to "Ivan & Vero (dev)" by this script
+//   * Users use `*-dev@vunds.local` emails
 
 import postgres from "postgres";
 

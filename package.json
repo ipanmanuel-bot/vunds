@@ -11,7 +11,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx --env-file=.env.local scripts/migrate.ts",
-    "db:seed": "tsx --env-file=.env.local db/seed/dev.ts"
+    "db:seed-demo": "tsx --env-file=.env.local db/seed/dev.ts"
   },
   "dependencies": {
     "@neon/config": "^1.8.3",

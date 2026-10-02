@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { FilterBar } from "@/components/transactions/FilterBar";
 import { TransactionList } from "@/components/transactions/TransactionList";
-import { DEV_PERIOD } from "@/lib/dev";
+import { currentPeriod } from "@/lib/dev";
 import { getFormOptions, listTransactions } from "@/lib/transactions-data";
 import { parseFilter } from "@/lib/transactions-filter";
 
@@ -14,7 +14,7 @@ export default async function TransactionsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
-  const filter = parseFilter(sp, DEV_PERIOD);
+  const filter = parseFilter(sp, currentPeriod());
 
   const [items, options] = await Promise.all([
     listTransactions(filter),
