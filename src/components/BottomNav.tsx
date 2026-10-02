@@ -6,8 +6,8 @@ import {
   CardIcon,
   HomeIcon,
   ListIcon,
-  MoreIcon,
   TargetIcon,
+  WalletIcon,
 } from "@/components/ui/icons";
 import type { ComponentType, SVGProps } from "react";
 
@@ -22,7 +22,7 @@ const items: NavItem[] = [
   { href: "/transactions", label: "Transactions", Icon: ListIcon },
   { href: "/accounts", label: "Accounts", Icon: CardIcon },
   { href: "/goals", label: "Goals", Icon: TargetIcon },
-  { href: "/more", label: "More", Icon: MoreIcon },
+  { href: "/budgets", label: "Budgets", Icon: WalletIcon },
 ];
 
 // Which nav tab, if any, matches the current path. Nested routes like
