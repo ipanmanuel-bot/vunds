@@ -17,7 +17,7 @@ function str(formData: FormData, key: string): string {
 function num(formData: FormData, key: string): number {
   const raw = formData.get(key);
   if (typeof raw !== "string") throw new Error(`Missing field: ${key}`);
-  const n = Number(raw.replace(/[^\d.-]/g, ""));
+  const n = Number(raw.replace(/\D/g, ""));
   if (!Number.isFinite(n)) throw new Error(`Invalid number for ${key}`);
   return n;
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { createAccountAction } from "@/app/accounts/actions";
+import { AmountInput } from "@/components/ui/AmountInput";
 import { Card } from "@/components/ui/Card";
 import {
   FormField,
@@ -128,16 +129,11 @@ export function AccountForm({
             htmlFor="currentBalance"
             hint="If this differs from what Vunds has, we record the difference as a balance adjustment transaction. Your original opening balance stays untouched."
           >
-            <input
+            <AmountInput
               id="currentBalance"
               name="currentBalance"
-              type="number"
-              inputMode="numeric"
-              step="1"
-              min="0"
               required
               defaultValue={defaults?.currentBalance ?? 0}
-              className={inputClass}
             />
           </FormField>
         ) : (
@@ -150,16 +146,11 @@ export function AccountForm({
                 : "The amount in this account on day one. Not counted as income."
             }
           >
-            <input
+            <AmountInput
               id="openingBalance"
               name="openingBalance"
-              type="number"
-              inputMode="numeric"
-              step="1"
-              min="0"
               required
               defaultValue={defaults?.openingBalance ?? 0}
-              className={inputClass}
             />
           </FormField>
         )}
@@ -187,16 +178,11 @@ export function AccountForm({
             htmlFor="creditLimit"
             hint="Required for credit cards. Available credit is limit − outstanding."
           >
-            <input
+            <AmountInput
               id="creditLimit"
               name="creditLimit"
-              type="number"
-              inputMode="numeric"
-              step="1"
-              min="1"
               required
               defaultValue={defaults?.creditLimit ?? ""}
-              className={inputClass}
             />
           </FormField>
         ) : null}

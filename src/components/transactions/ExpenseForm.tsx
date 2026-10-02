@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { createExpenseAction } from "@/app/transactions/actions";
+import { AmountInput } from "@/components/ui/AmountInput";
 import { Card } from "@/components/ui/Card";
 import {
   FormField,
@@ -58,17 +59,11 @@ export function ExpenseForm({
         ) : null}
 
         <FormField label="Amount (IDR)" htmlFor="amount">
-          <input
+          <AmountInput
             id="amount"
             name="amount"
-            type="number"
-            inputMode="numeric"
-            min="1"
-            step="1"
             required
-            placeholder="0"
             defaultValue={defaults?.amount ?? ""}
-            className={inputClass}
           />
         </FormField>
 

@@ -36,7 +36,11 @@ function optionalStr(formData: FormData, key: string): string | undefined {
 
 function num(formData: FormData, key: string): number {
   const raw = str(formData, key);
-  const n = Number(raw);
+  // Strip thousand separators (dots) and anything else non-digit. Amount
+  // inputs post formatted strings like "1.000.000"; the business logic
+  // works in plain integer rupiah.
+  const stripped = raw.replace(/\D/g, "");
+  const n = Number(stripped);
   if (!Number.isFinite(n)) throw new Error(`Invalid number for ${key}`);
   return n;
 }

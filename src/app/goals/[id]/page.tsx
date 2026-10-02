@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { allocateToFundAction } from "@/app/goals/actions";
 import { DeleteFundButton } from "@/components/funds/DeleteFundButton";
 import { TransactionList } from "@/components/transactions/TransactionList";
+import { AmountInput } from "@/components/ui/AmountInput";
 import { Card } from "@/components/ui/Card";
 import { FormField, inputClass } from "@/components/ui/FormField";
 import { Pill } from "@/components/ui/Pill";
@@ -112,17 +113,7 @@ export default async function FundDetailPage({
             <form action={allocateToFundAction} className="mt-4 flex flex-col gap-3">
               <input type="hidden" name="fundId" value={fund.id} />
               <FormField label="Amount (IDR)" htmlFor="amount">
-                <input
-                  id="amount"
-                  name="amount"
-                  type="number"
-                  inputMode="numeric"
-                  step="1"
-                  min="1"
-                  required
-                  placeholder="0"
-                  className={inputClass}
-                />
+                <AmountInput id="amount" name="amount" required />
               </FormField>
               <FormField label="Note (optional)" htmlFor="note">
                 <input

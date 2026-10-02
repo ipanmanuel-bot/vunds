@@ -21,7 +21,7 @@ function str(formData: FormData, key: string): string {
 function optionalPositiveNum(formData: FormData, key: string): number | null {
   const raw = formData.get(key);
   if (typeof raw !== "string" || raw.length === 0) return null;
-  const stripped = raw.replace(/[^\d.-]/g, "");
+  const stripped = raw.replace(/\D/g, "");
   if (stripped.length === 0) return null;
   const n = Number(stripped);
   if (!Number.isFinite(n) || n <= 0) return null;
@@ -31,7 +31,7 @@ function optionalPositiveNum(formData: FormData, key: string): number | null {
 function requiredPositiveNum(formData: FormData, key: string): number {
   const raw = formData.get(key);
   if (typeof raw !== "string") throw new Error(`Missing field: ${key}`);
-  const stripped = raw.replace(/[^\d.-]/g, "");
+  const stripped = raw.replace(/\D/g, "");
   const n = Number(stripped);
   if (!Number.isFinite(n) || n <= 0) {
     throw new Error(`${key} must be a positive number`);

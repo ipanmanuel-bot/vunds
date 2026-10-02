@@ -29,7 +29,7 @@ function optionalStr(formData: FormData, key: string): string | null {
 function num(formData: FormData, key: string): number {
   const raw = formData.get(key);
   if (typeof raw !== "string") throw new Error(`Missing field: ${key}`);
-  const stripped = raw.replace(/[^\d.-]/g, "");
+  const stripped = raw.replace(/\D/g, "");
   const n = Number(stripped);
   if (!Number.isFinite(n)) throw new Error(`Invalid number for ${key}`);
   return n;
@@ -83,7 +83,7 @@ export async function createAccountAction(formData: FormData): Promise<void> {
     if (!creditLimitRaw) {
       throw new Error("Credit limit is required for credit card accounts");
     }
-    const n = Number(creditLimitRaw.replace(/[^\d.-]/g, ""));
+    const n = Number(creditLimitRaw.replace(/\D/g, ""));
     if (!Number.isFinite(n) || n <= 0) {
       throw new Error("Credit limit must be positive");
     }
@@ -143,7 +143,7 @@ export async function updateAccountAction(formData: FormData): Promise<void> {
     if (!creditLimitRaw) {
       throw new Error("Credit limit is required for credit card accounts");
     }
-    const n = Number(creditLimitRaw.replace(/[^\d.-]/g, ""));
+    const n = Number(creditLimitRaw.replace(/\D/g, ""));
     if (!Number.isFinite(n) || n <= 0) {
       throw new Error("Credit limit must be positive");
     }

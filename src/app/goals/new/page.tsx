@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { createFundAction } from "@/app/goals/actions";
+import { AmountInput } from "@/components/ui/AmountInput";
 import { Card } from "@/components/ui/Card";
 import { FormField, inputClass } from "@/components/ui/FormField";
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -48,16 +49,7 @@ export default function NewFundPage() {
                 htmlFor="targetAmount"
                 hint="Leave empty for an ongoing pocket (no finish line). Add a target when this is a savings goal."
               >
-                <input
-                  id="targetAmount"
-                  name="targetAmount"
-                  type="number"
-                  inputMode="numeric"
-                  step="1"
-                  min="0"
-                  placeholder="0"
-                  className={inputClass}
-                />
+                <AmountInput id="targetAmount" name="targetAmount" />
               </FormField>
 
               <div className="mt-2 flex gap-2">
