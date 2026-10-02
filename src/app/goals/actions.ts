@@ -101,3 +101,38 @@ export async function allocateToFundAction(formData: FormData): Promise<void> {
   invalidate(fundId);
   redirect(`/goals/${fundId}`);
 }
+
+// =========================================================================
+// Delete a fund.
+//
+// Refuses when any transaction references the fund (as fund_id or
+// counter_fund_id) — the DB FK would reject the delete anyway, this
+// surfaces a readable error. "Mistakenly added" case covered; for a
+// fund with history, remove the referencing transactions first.
+// =========================================================================
+
+export async function deleteFundAction(formData: FormData): Promise<void> {
+  const id = str(formData, "fundId");
+
+  const [row] = await sql<{ count: string }[]>`
+    select count(*)::text as count
+    from transactions
+    where household_id = ${DEV_HOUSEHOLD_ID}
+      and (fund_id = ${id} or counter_fund_id = ${id})
+  `;
+  const txCount = Number(row?.count ?? 0);
+  if (txCount > 0) {
+    throw new Error(
+      `Cannot delete: ${txCount} transaction(s) still reference this fund. ` +
+        `Remove or re-tag those transactions first.`,
+    );
+  }
+
+  await sql`
+    delete from funds
+    where household_id = ${DEV_HOUSEHOLD_ID} and id = ${id}
+  `;
+
+  invalidate();
+  redirect("/goals");
+}

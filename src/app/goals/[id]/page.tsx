@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { allocateToFundAction } from "@/app/goals/actions";
+import { DeleteFundButton } from "@/components/funds/DeleteFundButton";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { Card } from "@/components/ui/Card";
 import { FormField, inputClass } from "@/components/ui/FormField";
@@ -144,6 +145,17 @@ export default async function FundDetailPage({
             <h2 className="mb-2 text-sm font-semibold">Activity</h2>
             <TransactionList items={activity} />
           </section>
+
+          <Card className="p-5">
+            <p className="text-sm font-semibold">Danger zone</p>
+            <p className="mt-1 text-[11px] text-muted">
+              Delete this fund entirely. Only possible when no transactions
+              reference it.
+            </p>
+            <div className="mt-3">
+              <DeleteFundButton fundId={fund.id} />
+            </div>
+          </Card>
         </main>
       </div>
     </div>
