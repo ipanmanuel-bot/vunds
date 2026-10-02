@@ -13,25 +13,6 @@ function msg(partial: Partial<GmailMessage>): GmailMessage {
   };
 }
 
-const EXAMPLE_QRIS_BODY = [
-  "Hai Adi,",
-  "Terima kasih sudah menggunakan blu untuk transaksimu.",
-  "Total",
-  "Rp124.000,00",
-  "Adi Putra",
-  "bluAccount",
-  "KIOSK_SAMPLE MERCHANT",
-  "TANGERANG",
-  "Nominal Tagihan",
-  "Rp124.000,00",
-  "Tgl & Jam Transaksi",
-  "29 Sep 2026 10:45:43 WIB",
-  "Tipe Transaksi",
-  "QRIS",
-  "No. Ref blu",
-  "6535 4253 4336",
-].join("\n");
-
 describe("bluParser.canHandle", () => {
   it("accepts blubybcadigital.id variants", () => {
     expect(
@@ -48,9 +29,33 @@ describe("bluParser.canHandle", () => {
   });
 });
 
-describe("bluParser.parse — QRIS payment", () => {
+describe("bluParser.parse — QRIS payment (multi-line amount)", () => {
+  // Shape taken from a sanitized real email body — the amount is split
+  // across three lines ("Rp" / "124.000" / ",00") as blu renders it.
+  const QRIS_BODY = [
+    "Hai Adi,",
+    "Terima kasih sudah menggunakan blu untuk transaksimu.",
+    "Total",
+    "Rp",
+    "124.000",
+    ",00",
+    "Adi Putra",
+    "bluAccount",
+    "KIOSK_SAMPLE MERCHANT",
+    "TANGERANG",
+    "Nominal Tagihan",
+    "Rp",
+    "124.000,00",
+    "Tgl & Jam Transaksi",
+    "29 Sep 2026 10:45:43 WIB",
+    "Tipe Transaksi",
+    "QRIS",
+    "No. Ref blu",
+    "6535 4253 4336",
+  ].join("\n");
+
   it("extracts amount, merchant, date, reference at high confidence", () => {
-    const parsed = bluParser.parse(msg({ bodyText: EXAMPLE_QRIS_BODY }));
+    const parsed = bluParser.parse(msg({ bodyText: QRIS_BODY }));
     expect(parsed).not.toBeNull();
     expect(parsed!.provider).toBe("blu");
     expect(parsed!.type).toBe("expense");
@@ -60,8 +65,43 @@ describe("bluParser.parse — QRIS payment", () => {
     expect(parsed!.providerReference).toBe("653542534336");
     expect(parsed!.transactionDate.toISOString().slice(0, 10)).toBe("2026-09-29");
     expect(parsed!.confidence).toBe("high");
-    // No card tail in blu notifications.
+    // No card tail in QRIS variant.
     expect(parsed!.accountIdentifier).toBeUndefined();
+  });
+});
+
+describe("bluParser.parse — Debit Online (bluDebit card)", () => {
+  // Debit Online variant: "Total Bayar" label, card tail present as
+  // "•••• •••• •••• 2919", merchant on a single line, Tipe Transaksi
+  // "Debit Online".
+  const DEBIT_BODY = [
+    "Hai Adi,",
+    "Terima kasih sudah menggunakan blu untuk transaksimu.",
+    "Total Bayar",
+    "Rp",
+    "411.865",
+    ",00",
+    "Adi Putra",
+    "bluAccount",
+    "Grab* 2-SAMPLE-RIDE-ID",
+    "Garuda x bluDebit Card",
+    "•••• •••• •••• 2919",
+    "Tgl & Jam Transaksi",
+    "30 Sep 2026 20:33:36 WIB",
+    "Tipe Transaksi",
+    "Debit Online",
+    "No. Ref blu",
+    "627313259559",
+  ].join("\n");
+
+  it("extracts amount, merchant, card tail, date", () => {
+    const parsed = bluParser.parse(msg({ bodyText: DEBIT_BODY }));
+    expect(parsed).not.toBeNull();
+    expect(parsed!.amount).toBe(411_865);
+    expect(parsed!.merchant).toBe("Grab* 2-SAMPLE-RIDE-ID");
+    expect(parsed!.accountIdentifier).toBe("2919");
+    expect(parsed!.transactionDate.toISOString().slice(0, 10)).toBe("2026-09-30");
+    expect(parsed!.confidence).toBe("high");
   });
 });
 

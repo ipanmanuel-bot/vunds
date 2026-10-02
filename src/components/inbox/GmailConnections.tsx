@@ -1,5 +1,6 @@
 import {
   disconnectGmailAction,
+  resetFailedImportsAction,
   syncFixturesAction,
   syncGmailAction,
 } from "@/app/inbox/actions";
@@ -103,6 +104,16 @@ export function GmailConnections({
             tone="muted"
           />
         </form>
+
+        {hasAny ? (
+          <form action={resetFailedImportsAction}>
+            <SubmitButton
+              idleLabel="Re-process previously failed emails"
+              pendingLabel="Resetting…"
+              tone="muted"
+            />
+          </form>
+        ) : null}
       </div>
 
       {flash.message ? (

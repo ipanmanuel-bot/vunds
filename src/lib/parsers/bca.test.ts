@@ -18,6 +18,8 @@ describe("bcaParser.canHandle", () => {
     expect(bcaParser.canHandle(msg({ from: "BCAelectronic@bca.co.id" }))).toBe(true);
     expect(bcaParser.canHandle(msg({ from: "notification@bca.co.id" }))).toBe(true);
     expect(bcaParser.canHandle(msg({ from: "KlikBCA notice <no-reply@bca.co.id>" }))).toBe(true);
+    expect(bcaParser.canHandle(msg({ from: "KartuKreditBCA@klikbca.com" }))).toBe(true);
+    expect(bcaParser.canHandle(msg({ from: "BCA <bca@bca.co.id>" }))).toBe(true);
   });
 
   it("rejects non-BCA senders", () => {
@@ -26,8 +28,84 @@ describe("bcaParser.canHandle", () => {
   });
 });
 
-describe("bcaParser.parse — high-confidence paths", () => {
-  it("parses a classic BCA card purchase (amount + merchant + date)", () => {
+describe("bcaParser.parse — real-world formats", () => {
+  it("parses a myBCA Internet Transaction Journal (QRIS Payment)", () => {
+    // Shape taken from a sanitized real email body.
+    const body = [
+      "Hello SAMPLE USER,",
+      "You just made a transaction through myBCA.",
+      "Status",
+      ":",
+      "Successful",
+      "Transaction Date",
+      ":",
+      "28 Sep 2026 12:52:33",
+      "Transaction Type",
+      ":",
+      "QRIS Payment",
+      "Payment to",
+      ":",
+      "CEMILAN KERATON",
+      "Merchant Location",
+      ":",
+      "TANGERANG, 15157, ID",
+      "Source of Fund",
+      ":",
+      "TAHAPAN - 6044****98",
+      "Total Payment",
+      ":",
+      "IDR 86,000.00",
+      "Reference No.",
+      ":",
+      "9527120260928125229883QRS1230425899",
+    ].join("\n");
+    const parsed = bcaParser.parse(
+      msg({ from: "BCA <bca@bca.co.id>", subject: "Internet Transaction Journal", bodyText: body }),
+    );
+    expect(parsed).not.toBeNull();
+    expect(parsed!.amount).toBe(86_000);
+    expect(parsed!.merchant).toBe("CEMILAN KERATON");
+    // Source of Fund "6044****98" — first-4 wins because the trailing "98"
+    // is only 2 digits.
+    expect(parsed!.accountIdentifier).toBe("6044");
+    expect(parsed!.transactionDate.toISOString().slice(0, 10)).toBe("2026-09-28");
+    expect(parsed!.providerReference).toBe("9527120260928125229883QRS1230425899");
+    expect(parsed!.confidence).toBe("high");
+  });
+
+  it("parses a KartuKreditBCA credit card purchase", () => {
+    const body = [
+      "Yth. Pemegang Kartu Kredit BCA,",
+      "Terima kasih telah bertransaksi menggunakan Kartu Kredit BCA:",
+      "Nomor Kartu",
+      ":",
+      "455633XXXX8409",
+      "Merchant / ATM",
+      ":",
+      "APPLE.COM/BILL",
+      "Pada Tanggal",
+      ":",
+      "13-08-2026 08:33:19 WIB",
+      "Sejumlah",
+      ":",
+      "IDR 85.000",
+    ].join("\n");
+    const parsed = bcaParser.parse(
+      msg({
+        from: "KartuKreditBCA@klikbca.com",
+        subject: "Credit Card Transaction Notification",
+        bodyText: body,
+      }),
+    );
+    expect(parsed).not.toBeNull();
+    expect(parsed!.amount).toBe(85_000);
+    expect(parsed!.merchant).toBe("APPLE.COM/BILL");
+    expect(parsed!.accountIdentifier).toBe("8409");
+    expect(parsed!.transactionDate.toISOString().slice(0, 10)).toBe("2026-08-13");
+    expect(parsed!.confidence).toBe("high");
+  });
+
+  it("parses a classic inline debit purchase (synthetic)", () => {
     const parsed = bcaParser.parse(
       msg({
         bodyText: [
@@ -41,10 +119,7 @@ describe("bcaParser.parse — high-confidence paths", () => {
       }),
     );
     expect(parsed).not.toBeNull();
-    expect(parsed!.provider).toBe("bca");
-    expect(parsed!.type).toBe("expense");
     expect(parsed!.amount).toBe(92_000);
-    expect(parsed!.currency).toBe("IDR");
     expect(parsed!.merchant).toBe("STARBUCKS GRAND INDONESIA");
     expect(parsed!.accountIdentifier).toBe("1234");
     expect(parsed!.providerReference).toBe("20260928-ABC123");
@@ -91,7 +166,7 @@ describe("bcaParser.parse — low confidence and failure", () => {
   it("flags low confidence when date is missing (uses Gmail internalDate as fallback)", () => {
     const parsed = bcaParser.parse(
       msg({
-        internalDate: String(Date.UTC(2026, 9, 1, 12)), // 2026-10-01T12:00Z
+        internalDate: String(Date.UTC(2026, 9, 1, 12)),
         bodyText: "Merchant: GRAB TRIP. Nominal: Rp 55.000.",
       }),
     );

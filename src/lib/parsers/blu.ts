@@ -1,80 +1,105 @@
 // blu parser (BCA Digital).
 //
-// blu notification emails use a label-above-value structure. The HTML
-// decomposes to blocks like:
+// Two notification shapes seen in the wild:
 //
+//   QRIS (bluAccount source, no card tail):
 //     Total
-//     Rp124.000,00
-//     Ivan Manuel Hermawan
+//     Rp
+//     124.000
+//     ,00
 //     bluAccount
 //     KIOSK_SOLARIA ALSUT LG 2
 //     TANGERANG
 //     Nominal Tagihan
-//     Rp124.000,00
+//     Rp 124.000,00
 //     Tgl & Jam Transaksi
 //     29 Sep 2026 10:45:43 WIB
 //     Tipe Transaksi
 //     QRIS
-//     No. Ref blu
-//     6535 4253 4336
 //
-// blu is app-only — no card number appears in the body. Pending transactions
-// get account_id=NULL and the user picks the account on the confirm form.
+//   Debit Online (bluDebit card source, has a card tail):
+//     Total Bayar
+//     Rp
+//     411.865
+//     ,00
+//     bluAccount
+//     Grab* 2-C8JHRXTWSA63TJ
+//     Garuda x bluDebit Card
+//     •••• •••• •••• 2919
+//     Tgl & Jam Transaksi
+//     30 Sep 2026 20:33:36 WIB
+//     Tipe Transaksi
+//     Debit Online
+//
+// Note the amount is split across up to three lines in the real HTML emails
+// — see readMultiLineAmount in ./shared.ts.
 
 import { htmlToText } from "./html";
+import {
+  extractAccountId,
+  findLabelIdx,
+  parseDate,
+  parseMoney,
+  readMultiLineAmount,
+  toLines,
+  valueAfter,
+} from "./shared";
 import type { BankParser, GmailMessage, ParsedTransaction } from "./types";
 
-const BLU_FROM_PATTERNS = [
-  /@blubybcadigital\.id/i,
-  /receipts@blu/i,
+const BLU_FROM_PATTERNS = [/@blubybcadigital\.id/i, /receipts@blu/i];
+
+// Preference order: the authoritative transaction value first, display totals
+// after. "Nominal Tagihan" and "Total Bayar" are the two labels blu uses for
+// the transaction value; "Total" is a summary that typically equals it.
+const AMOUNT_LABELS: RegExp[] = [
+  /^Nominal Tagihan\b/i,
+  /^Total Bayar\b/i,
+  /^Total\b/i,
+  /^Nominal\b/i,
 ];
 
-const AMOUNT_PATTERN = /^Rp\s*([\d.,]+)/;
-const INDO_DATE_PATTERN =
-  /^(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Mei|Jun|Jul|Aug|Agu|Sep|Oct|Okt|Nov|Dec|Des)[a-z]*\s+(\d{4})/i;
-
-const MONTH_INDEX: Record<string, number> = {
-  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, mei: 4, jun: 5,
-  jul: 6, aug: 7, agu: 7, sep: 8, oct: 9, okt: 9, nov: 10, dec: 11, des: 11,
-};
-
-function parseAmount(raw: string): number | null {
-  const stripped = raw.replace(/^Rp\s*/i, "").trim();
-  if (!/^[\d.,]+$/.test(stripped)) return null;
-  // Indonesian: "." thousands, "," decimal → strip "." then replace "," with "."
-  const normalised = stripped.replace(/\./g, "").replace(",", ".");
-  const n = Number(normalised);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return Math.round(n);
-}
-
-function parseIndoDate(raw: string): Date | null {
-  const m = INDO_DATE_PATTERN.exec(raw);
-  if (!m) return null;
-  const day = Number(m[1]);
-  const month = MONTH_INDEX[m[2]!.toLowerCase().slice(0, 3)];
-  const year = Number(m[3]);
-  if (month === undefined) return null;
-  return new Date(Date.UTC(year, month, day));
-}
-
-// Find the index of the first line that equals or starts with the given label.
-function findLabel(lines: string[], label: string | RegExp): number {
-  for (let i = 0; i < lines.length; i++) {
-    const l = lines[i]!;
-    if (typeof label === "string") {
-      if (l === label || l.startsWith(label)) return i;
-    } else {
-      if (label.test(l)) return i;
-    }
+function readAmount(lines: string[]): string | null {
+  for (const label of AMOUNT_LABELS) {
+    const idx = findLabelIdx(lines, label);
+    if (idx === -1) continue;
+    const multi = readMultiLineAmount(lines, idx + 1);
+    if (multi) return multi;
+    const next = lines[idx + 1]?.trim();
+    if (next && /^(Rp|IDR)\s*[\d.,]/i.test(next)) return next;
   }
-  return -1;
+  return null;
 }
 
-function valueAfter(lines: string[], label: string | RegExp): string | null {
-  const idx = findLabel(lines, label);
-  if (idx === -1 || idx + 1 >= lines.length) return null;
-  return lines[idx + 1]!;
+// Merchant is the line(s) between "bluAccount" and the next section (card
+// tail or Tgl/Nominal/Tipe/No. Ref). We cap at 2 lines because blu uses
+// "<merchant>" + "<city>" for QRIS and "<merchant>" + "<card name>" for
+// Debit Online — in the latter case the card-name line is the start of a
+// section we actually want to skip, so we look for a "card tail" line
+// (dots/digits-only) to detect it.
+function readMerchant(lines: string[]): string | undefined {
+  const idx = findLabelIdx(lines, /^bluAccount\b/i);
+  if (idx === -1) return undefined;
+  const parts: string[] = [];
+  for (let i = idx + 1; i < lines.length && parts.length < 2; i++) {
+    const l = lines[i]!;
+    if (/^(Nominal|Total|Tipe|No\.?\s*Ref|Tgl|Lokasi)/i.test(l)) break;
+    if (/^(Garuda|.* Card$)/i.test(l)) break; // card-name marker on Debit Online
+    // Card tail line: "•••• •••• •••• 2919" (U+2022 bullet, U+00A0 nbsp)
+    if (/^[\s*•·• ]+\d{3,}\s*$/.test(l)) break;
+    parts.push(l);
+  }
+  return parts.join(" ").trim() || undefined;
+}
+
+// Debit Online emails include "•••• •••• •••• 2919" (last 4 of the card).
+// QRIS emails have no card tail — accountIdentifier stays undefined and
+// the user resolves it on the inbox form.
+function readCardTail(lines: string[]): string | undefined {
+  // Masked card tail line: "•••• •••• •••• 2919". Masking character set
+  // includes U+2022 (bullet), U+00B7 (middle dot), U+2027 (hyphenation
+  // point), ASCII `*`, and U+00A0 (nbsp).
+  const match = lines.find((l) => /^[\s*•·‧ •]+\d{3,}\s*$/.test(l));
+  return match ? extractAccountId(match) : undefined;
 }
 
 export const bluParser: BankParser = {
@@ -87,70 +112,42 @@ export const bluParser: BankParser = {
   parse(message: GmailMessage): ParsedTransaction | null {
     const text = message.bodyText || htmlToText(message.bodyHtml ?? "");
     if (!text || text.length < 20) return null;
+    const lines = toLines(text);
 
-    const lines = text
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
-
-    // ---- Amount ----
-    // Prefer "Nominal Tagihan" (the authoritative transaction value) over
-    // "Total" (which may include fees). Fall back to the first standalone
-    // "Rp..." line if neither label is found.
-    let amountRaw =
-      valueAfter(lines, "Nominal Tagihan") ??
-      valueAfter(lines, "Nominal") ??
-      valueAfter(lines, "Total");
-    if (!amountRaw) {
-      amountRaw = lines.find((l) => AMOUNT_PATTERN.test(l)) ?? null;
-    }
-    const amount = amountRaw ? parseAmount(amountRaw) : null;
+    const amountRaw = readAmount(lines);
+    if (!amountRaw) return null;
+    const amount = parseMoney(amountRaw);
     if (amount === null) return null;
 
-    // ---- Date ----
-    // "Tgl & Jam Transaksi" → next line is "29 Sep 2026 HH:MM:SS WIB".
     const dateRaw =
       valueAfter(lines, /^Tgl\s*&?\s*Jam/i) ??
-      valueAfter(lines, /^Tanggal/i);
-    const parsedDate = dateRaw ? parseIndoDate(dateRaw) : null;
+      valueAfter(lines, /^Tanggal\b/i);
+    const parsedDate = dateRaw ? parseDate(dateRaw) : null;
     const transactionDate =
       parsedDate ??
       (message.internalDate
         ? new Date(Number(message.internalDate))
         : new Date());
 
-    // ---- Merchant ----
-    // Appears right after "bluAccount" (and before "Nominal"). The next 1-2
-    // lines are the merchant name and often a city — join both into one
-    // display string.
-    let merchant: string | undefined;
-    const merchantIdx = findLabel(lines, /^bluAccount|^Account$/);
-    if (merchantIdx !== -1) {
-      const parts: string[] = [];
-      // Collect lines until we hit the "Nominal" or similar section header.
-      for (let i = merchantIdx + 1; i < lines.length && parts.length < 2; i++) {
-        const l = lines[i]!;
-        if (/^(Nominal|Total|Tipe|No\.?\s*Ref|Tgl)/i.test(l)) break;
-        parts.push(l);
-      }
-      merchant = parts.join(" ").trim() || undefined;
+    const merchant = readMerchant(lines);
+    const accountIdentifier = readCardTail(lines);
+
+    const txType = valueAfter(lines, /^Tipe Transaksi\b/i)?.toLowerCase() ?? "";
+    // Bank-to-bank outgoing transfers aren't spending (and would double-
+    // count against the counterparty). Everything else blu notifies on
+    // (QRIS, Debit Online, pembayaran) is a purchase.
+    if (/^transfer\b/i.test(txType) || /\btransfer\b/i.test(message.subject)) {
+      return null;
     }
-
-    // ---- Reference ----
-    const referenceRaw = valueAfter(lines, /^No\.?\s*Ref/i);
-    const providerReference = referenceRaw?.replace(/\s+/g, "") || undefined;
-
-    // ---- Type ----
-    // We only confidently classify as 'expense' for QRIS/payment/purchase
-    // emails. "Transfer Keluar" style outgoing transfers could be modelled
-    // as expense too — but a bank-to-bank transfer isn't spending, and
-    // double-counting with a counterparty's incoming email is a real risk.
-    // Keep that out of scope for the first pass.
-    const txType = valueAfter(lines, /^Tipe Transaksi/i)?.toLowerCase() ?? "";
     const isPurchase =
-      /qris|pembayaran|payment|belanja|purchase/i.test(message.subject) ||
-      /qris|pembayaran|payment|purchase/i.test(txType);
+      /qris|pembayaran|payment|belanja|purchase|debit\s+online|transaksi/i.test(
+        message.subject,
+      ) ||
+      /qris|pembayaran|payment|purchase|debit\s+online/i.test(txType);
     if (!isPurchase) return null;
+
+    const referenceRaw = valueAfter(lines, /^No\.?\s*Ref\b/i);
+    const providerReference = referenceRaw?.replace(/\s+/g, "") || undefined;
 
     const confidence: "high" | "low" =
       merchant && parsedDate ? "high" : "low";
@@ -161,9 +158,7 @@ export const bluParser: BankParser = {
       type: "expense",
       amount,
       currency: "IDR",
-      // No card tail in blu notifications — account_id resolution happens
-      // via the user picking it on the Inbox confirm form.
-      accountIdentifier: undefined,
+      accountIdentifier,
       merchant,
       transactionDate,
       confidence,
@@ -171,8 +166,9 @@ export const bluParser: BankParser = {
         subject: message.subject,
         merchant_raw: merchant ?? null,
         date_raw: dateRaw ?? null,
-        amount_raw: amountRaw ?? null,
+        amount_raw: amountRaw,
         tx_type: txType || null,
+        card_tail: accountIdentifier ?? null,
       },
     };
   },

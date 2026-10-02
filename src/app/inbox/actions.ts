@@ -128,6 +128,24 @@ export async function syncFixturesAction(): Promise<void> {
   redirect(`/inbox?sync=${encodeURIComponent(encodeResult("fixtures", r))}`);
 }
 
+// Delete imported_messages rows that didn't produce a transaction so the
+// next Gmail sync re-processes them with the current parsers. Useful when
+// parsers have been updated to handle a previously-failed format — the
+// dedup uniqueness constraint would otherwise skip those messages forever.
+export async function resetFailedImportsAction(): Promise<void> {
+  await sql`
+    delete from imported_messages
+    where household_id = ${DEV_HOUSEHOLD_ID}
+      and parse_status in ('failed', 'partial', 'unknown')
+      and not exists (
+        select 1 from transactions t
+        where t.imported_message_id = imported_messages.id
+      )
+  `;
+  revalidatePath("/inbox");
+  redirect("/inbox");
+}
+
 export async function disconnectGmailAction(formData: FormData): Promise<void> {
   // Each connection is identified by its token-row id so the user can remove
   // one Gmail while keeping another connected.

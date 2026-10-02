@@ -27,7 +27,8 @@ export function buildQuery(opts: GmailFetcherOptions): string {
 // Known sender hints per bank. Keep this list conservative; a parser's
 // canHandle() is still the gate — this is just to narrow the Gmail query.
 export const BANK_FROM_HINTS = [
-  "bca.co.id",
-  "blubybcadigital.id",
-  "ocbc.id",
+  "bca.co.id",         // BCAelectronic, notification@bca, bca@bca (myBCA)
+  "klikbca.com",       // KartuKreditBCA (BCA Credit Card notifications)
+  "blubybcadigital.id",// blu
+  "ocbc.id",           // OCBC
 ];

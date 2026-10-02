@@ -25,9 +25,15 @@ const BLOCK_TAGS = new Set([
 export function htmlToText(html: string): string {
   if (!html) return "";
 
-  // Strip <script> and <style> blocks whole.
+  // Strip <script> and <style> blocks whole, and HTML comments. Outlook
+  // "conditional comments" (<!--[if mso | IE]>...<![endif]-->) are legal
+  // HTML comments; without stripping them we leave `<!--[if mso | IE]>`
+  // fragments as noise in the text output. Also strip bare `<![endif]-->`
+  // which some mailers emit without a matching opener.
   let out = html.replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "");
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<!\[endif\]-->/gi, "");
 
   // Insert newlines before block-level opening tags and after their closes.
   out = out.replace(/<\/?([a-zA-Z0-9]+)[^>]*>/g, (_, tag: string) => {

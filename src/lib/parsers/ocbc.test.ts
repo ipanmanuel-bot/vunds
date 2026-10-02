@@ -31,7 +31,9 @@ describe("ocbcParser.canHandle", () => {
   });
 });
 
-describe("ocbcParser — Credit Card Transaction", () => {
+describe("ocbcParser — Credit Card Transaction (real format)", () => {
+  // Shape taken from a sanitized real email body — date and
+  // merchant-amount are on separate lines after the HTML table strips.
   const CC_BODY = [
     "Dear Mr./Mrs./Ms. SAMPLE USER,",
     "Thank you for your trusting in OCBC as your banking partner.",
@@ -39,9 +41,12 @@ describe("ocbcParser — Credit Card Transaction", () => {
     "Credit Card Number",
     "Nomor Kartu Kredit",
     "-1774",
-    "Date   Merchant Name   -   Amount",
+    "Date",
     "Tanggal",
-    "30/09/26  ADOBE *ADOBE 800-333  -  IDR214,008.00",
+    "Merchant Name - Amount",
+    "Nama Merchant - Jumlah",
+    "30/09/26",
+    "ADOBE *ADOBE 800-333 - IDR214,008.00",
     "You can convert your transaction into installments...",
   ].join("\n");
 
@@ -74,26 +79,39 @@ describe("ocbcParser — Credit Card Transaction", () => {
   });
 });
 
-describe("ocbcParser — QR Payment", () => {
+describe("ocbcParser — QR Payment (real format)", () => {
+  // Shape taken from a sanitized real email body — labels and values are
+  // on separate lines after the HTML strip.
   const QR_BODY = [
     "QR Payment Successful",
     "Dear Mr / Mrs / Ms SAMPLE USER,",
-    "FROM SAMPLE USER",
-    "IDR 634810187332 Savings",
+    "FROM",
+    "SAMPLE USER",
+    "IDR",
+    "634810187332",
+    "Savings",
     "IDR",
     "IDR 109,499",
     "TO",
     "QR Payment",
-    "Merchant PAN 9360091430001309515",
+    "Merchant PAN",
+    "9360091430001309515",
     "Sample Merchant, Sample Branch",
     "JAKARTA UTARA, 14470",
-    "Terminal No. A01",
-    "Acquirer Name DOMPET ANAK BANGSA",
-    "Amount Pay IDR 109499.00",
-    "Tip IDR 0.00",
-    "Reff No. 000049260108 was successfully done",
-    "Payment Date: 29/09/2026",
-    "Instruction Date : 29/09/2026",
+    "Terminal No.",
+    "A01",
+    "Acquirer Name",
+    "DOMPET ANAK BANGSA",
+    "Amount Pay",
+    "IDR 109499.00",
+    "Tip",
+    "IDR 0.00",
+    "Reff No.",
+    "000049260108",
+    "Payment Date:",
+    "29/09/2026",
+    "Instruction Date :",
+    "29/09/2026",
     "Reference No.: MB202609291649418788",
   ].join("\n");
 
@@ -106,7 +124,6 @@ describe("ocbcParser — QR Payment", () => {
     );
     expect(parsed).not.toBeNull();
     expect(parsed!.amount).toBe(109_499);
-    // Last 4 of the full account number 634810187332 → 7332
     expect(parsed!.accountIdentifier).toBe("7332");
     expect(parsed!.merchant).toContain("Sample Merchant");
     expect(parsed!.transactionDate.toISOString().slice(0, 10)).toBe("2026-09-29");
