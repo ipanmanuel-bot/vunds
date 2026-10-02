@@ -10,6 +10,7 @@ import {
   inputClass,
   selectClass,
 } from "@/components/ui/FormField";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import type { MemberOption } from "@/lib/transactions-data";
 
 type AccountType = "debit" | "cash" | "credit";
@@ -220,12 +221,12 @@ export function AccountForm({
         ) : null}
 
         <div className="mt-2 flex gap-2">
-          <button
-            type="submit"
-            className="flex-1 rounded-xl bg-foreground py-3 text-sm font-medium text-background"
-          >
-            {submitLabel}
-          </button>
+          <div className="flex-1">
+            <SubmitButton
+              idleLabel={submitLabel}
+              pendingLabel={isEdit ? "Saving…" : "Creating…"}
+            />
+          </div>
           <Link
             href={cancelHref}
             className="rounded-xl bg-surface-tint px-5 py-3 text-sm font-medium text-muted-strong"

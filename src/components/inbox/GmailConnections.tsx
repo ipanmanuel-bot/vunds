@@ -3,7 +3,7 @@ import {
   syncFixturesAction,
   syncGmailAction,
 } from "@/app/inbox/actions";
-import { SubmitButton } from "@/components/inbox/SubmitButton";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Card } from "@/components/ui/Card";
 
 export interface GmailConnection {
