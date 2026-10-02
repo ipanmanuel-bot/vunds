@@ -190,3 +190,38 @@ export async function updateAccountAction(formData: FormData): Promise<void> {
   invalidate(id);
   redirect(`/accounts/${id}`);
 }
+
+// =========================================================================
+// Delete
+//
+// Only permitted when NO transactions reference the account — otherwise
+// deleting would orphan financial history (and the DB would reject it via
+// the FK anyway). "Mistakenly added" case: a brand-new account you want to
+// scrub. For an account with history, archive it instead.
+// =========================================================================
+
+export async function deleteAccountAction(formData: FormData): Promise<void> {
+  const id = str(formData, "accountId");
+
+  const [row] = await sql<{ count: string }[]>`
+    select count(*)::text as count
+    from transactions
+    where household_id = ${DEV_HOUSEHOLD_ID}
+      and (account_id = ${id} or counter_account_id = ${id})
+  `;
+  const txCount = Number(row?.count ?? 0);
+  if (txCount > 0) {
+    throw new Error(
+      `Cannot delete: ${txCount} transaction(s) still reference this account. ` +
+        `Delete those transactions first, or archive the account instead.`,
+    );
+  }
+
+  await sql`
+    delete from accounts
+    where household_id = ${DEV_HOUSEHOLD_ID} and id = ${id}
+  `;
+
+  invalidate();
+  redirect("/accounts");
+}
