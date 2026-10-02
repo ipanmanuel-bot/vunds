@@ -16,6 +16,8 @@ const typeBadge = {
   transfer: { Icon: RepeatIcon, bg: "bg-surface-tint text-muted-strong", sign: "" },
   credit_card_payment: { Icon: WalletIcon, bg: "bg-warm/60 text-warm-fg", sign: "" },
   fund_allocation: { Icon: ArrowRightIcon, bg: "bg-surface-tint text-muted-strong", sign: "" },
+  adjustment_increase: { Icon: ArrowDownIcon, bg: "bg-surface-tint text-muted-strong", sign: "+" },
+  adjustment_decrease: { Icon: ArrowUpIcon, bg: "bg-surface-tint text-muted-strong", sign: "-" },
 } as const;
 
 function title(t: Item): string {
@@ -24,6 +26,9 @@ function title(t: Item): string {
   if (t.type === "credit_card_payment") return "Credit card payment";
   if (t.type === "fund_allocation") {
     return `Fund allocation${t.counterFundName ? ` → ${t.counterFundName}` : ""}`;
+  }
+  if (t.type === "adjustment_increase" || t.type === "adjustment_decrease") {
+    return "Balance adjustment";
   }
   return t.categoryName ?? t.note ?? "Transaction";
 }

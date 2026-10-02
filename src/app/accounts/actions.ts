@@ -4,8 +4,9 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getAccount } from "@/lib/accounts-data";
 import { sql } from "@/lib/db";
-import { DEV_HOUSEHOLD_ID } from "@/lib/dev";
+import { DEV_HOUSEHOLD_ID, DEV_VIEWER } from "@/lib/dev";
 
 // =========================================================================
 // Form input helpers
@@ -112,28 +113,33 @@ export async function createAccountAction(formData: FormData): Promise<void> {
 // Deliberately NOT touching `type` — converting between debit/credit after
 // transactions exist is a mess (balance math changes semantics). If you
 // mis-typed the account type at creation, archive and add a new one.
+//
+// Current-balance semantics (reconciliation):
+//   - Edit form submits `currentBalance` — the balance the user wants the
+//     account to now show.
+//   - We load the current computed balance via the finance library and
+//     compute delta.
+//   - Non-zero delta → create an adjustment_increase / adjustment_decrease
+//     transaction dated today. opening_balance NEVER changes after
+//     creation, preserving the audit trail.
 // =========================================================================
 
 export async function updateAccountAction(formData: FormData): Promise<void> {
   const id = str(formData, "accountId");
   const name = str(formData, "name").trim();
-  const openingBalance = num(formData, "openingBalance");
+  const currentBalanceInput = num(formData, "currentBalance");
   const creditLimitRaw = optionalStr(formData, "creditLimit");
   const ownerMemberId = optionalStr(formData, "ownerMemberId");
   const externalIdentifier = normaliseIdentifier(
     optionalStr(formData, "externalIdentifier"),
   );
+  const adjustmentNote = optionalStr(formData, "adjustmentNote");
 
-  // Resolve current type from DB — the form shouldn't allow changing it,
-  // but we check so we can enforce the credit_limit invariant correctly.
-  const [current] = await sql<{ type: AccountType }[]>`
-    select type from accounts
-    where household_id = ${DEV_HOUSEHOLD_ID} and id = ${id}
-  `;
-  if (!current) throw new Error("Account not found");
+  const account = await getAccount(id);
+  if (!account) throw new Error("Account not found");
 
   let creditLimit: number | null = null;
-  if (current.type === "credit") {
+  if (account.type === "credit") {
     if (!creditLimitRaw) {
       throw new Error("Credit limit is required for credit card accounts");
     }
@@ -145,17 +151,41 @@ export async function updateAccountAction(formData: FormData): Promise<void> {
   }
 
   const identifierToStore =
-    current.type === "cash" ? null : externalIdentifier;
+    account.type === "cash" ? null : externalIdentifier;
 
-  await sql`
-    update accounts set
-      name                 = ${name},
-      owner_member_id      = ${ownerMemberId},
-      opening_balance      = ${openingBalance},
-      credit_limit         = ${creditLimit},
-      external_identifier  = ${identifierToStore}
-    where household_id = ${DEV_HOUSEHOLD_ID} and id = ${id}
-  `;
+  // Compute delta vs. the account's current computed balance.
+  // Debit/cash balance = cash on hand; credit balance = outstanding owed.
+  const currentValue =
+    account.type === "credit" ? (account.outstanding ?? 0) : (account.balance ?? 0);
+  const delta = currentBalanceInput - currentValue;
+
+  await sql.begin(async (db) => {
+    await db`
+      update accounts set
+        name                 = ${name},
+        owner_member_id      = ${ownerMemberId},
+        credit_limit         = ${creditLimit},
+        external_identifier  = ${identifierToStore}
+      where household_id = ${DEV_HOUSEHOLD_ID} and id = ${id}
+    `;
+
+    if (delta !== 0) {
+      const direction = delta > 0 ? "adjustment_increase" : "adjustment_decrease";
+      const magnitude = Math.abs(delta);
+      const dateStr = new Date().toISOString().slice(0, 10);
+      await db`
+        insert into transactions (
+          id, household_id, created_by_member_id, type, status, amount, currency,
+          transaction_date, account_id, note
+        ) values (
+          ${randomUUID()}, ${DEV_HOUSEHOLD_ID}, ${DEV_VIEWER.memberId},
+          ${direction}, 'confirmed', ${magnitude}, 'IDR',
+          ${dateStr}, ${id},
+          ${adjustmentNote ?? `Balance correction (${delta > 0 ? "+" : "−"}${magnitude})`}
+        )
+      `;
+    }
+  });
 
   invalidate(id);
   redirect(`/accounts/${id}`);

@@ -32,6 +32,8 @@ const typeLabel: Record<TransactionType, string> = {
   credit_card_payment: "Credit card payment",
   fund_allocation: "Fund allocation",
   refund: "Refund",
+  adjustment_increase: "Balance adjustment",
+  adjustment_decrease: "Balance adjustment",
 };
 
 const amountSign: Record<TransactionType, "+" | "-" | ""> = {
@@ -41,6 +43,8 @@ const amountSign: Record<TransactionType, "+" | "-" | ""> = {
   transfer: "",
   credit_card_payment: "",
   fund_allocation: "",
+  adjustment_increase: "+",
+  adjustment_decrease: "-",
 };
 
 export default async function TransactionDetailPage({

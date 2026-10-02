@@ -45,6 +45,12 @@ export function cashBalance(
       case "refund":
         if (t.accountId === account.id) balance += t.amount;
         break;
+      case "adjustment_increase":
+        if (t.accountId === account.id) balance += t.amount;
+        break;
+      case "adjustment_decrease":
+        if (t.accountId === account.id) balance -= t.amount;
+        break;
       case "fund_allocation":
         // Virtual: never touches a bank balance.
         break;
@@ -74,6 +80,13 @@ export function creditCardOutstanding(
         break;
       case "refund":
         // Refund to a credit account reduces liability.
+        if (t.accountId === account.id) outstanding -= t.amount;
+        break;
+      case "adjustment_increase":
+        // Increase on a credit account = you owe more.
+        if (t.accountId === account.id) outstanding += t.amount;
+        break;
+      case "adjustment_decrease":
         if (t.accountId === account.id) outstanding -= t.amount;
         break;
       default:

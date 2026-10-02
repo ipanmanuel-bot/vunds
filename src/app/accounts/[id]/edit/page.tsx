@@ -49,7 +49,12 @@ export default async function EditAccountPage({
               name: account.name,
               type: account.type,
               ownerMemberId: account.ownerMemberId,
-              openingBalance: account.openingBalance,
+              // Prefill the "current balance" field with the computed value
+              // — balance for debit/cash, outstanding for credit cards.
+              currentBalance:
+                account.type === "credit"
+                  ? (account.outstanding ?? 0)
+                  : (account.balance ?? 0),
               creditLimit: account.limit ?? null,
               externalIdentifier: account.externalIdentifier,
             }}

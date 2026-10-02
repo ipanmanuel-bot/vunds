@@ -18,7 +18,10 @@ export interface AccountDefaults {
   name?: string;
   type?: AccountType;
   ownerMemberId?: string | null;
+  // Create flow uses this (becomes the opening_balance).
   openingBalance?: number;
+  // Edit flow uses this (becomes the target for a balance adjustment).
+  currentBalance?: number;
   creditLimit?: number | null;
   externalIdentifier?: string | null;
 }
@@ -116,27 +119,66 @@ export function AccountForm({
           </select>
         </FormField>
 
-        <FormField
-          label="Opening balance (IDR)"
-          htmlFor="openingBalance"
-          hint={
-            isCredit
-              ? "For a credit card this is the opening outstanding (usually 0 for a fresh card)."
-              : "The amount in this account on day one. Not counted as income."
-          }
-        >
-          <input
-            id="openingBalance"
-            name="openingBalance"
-            type="number"
-            inputMode="numeric"
-            step="1"
-            min="0"
-            required
-            defaultValue={defaults?.openingBalance ?? 0}
-            className={inputClass}
-          />
-        </FormField>
+        {isEdit ? (
+          <FormField
+            label={
+              isCredit ? "Current outstanding (IDR)" : "Current balance (IDR)"
+            }
+            htmlFor="currentBalance"
+            hint="If this differs from what Vunds has, we record the difference as a balance adjustment transaction. Your original opening balance stays untouched."
+          >
+            <input
+              id="currentBalance"
+              name="currentBalance"
+              type="number"
+              inputMode="numeric"
+              step="1"
+              min="0"
+              required
+              defaultValue={defaults?.currentBalance ?? 0}
+              className={inputClass}
+            />
+          </FormField>
+        ) : (
+          <FormField
+            label="Opening balance (IDR)"
+            htmlFor="openingBalance"
+            hint={
+              isCredit
+                ? "For a credit card this is the opening outstanding (usually 0 for a fresh card)."
+                : "The amount in this account on day one. Not counted as income."
+            }
+          >
+            <input
+              id="openingBalance"
+              name="openingBalance"
+              type="number"
+              inputMode="numeric"
+              step="1"
+              min="0"
+              required
+              defaultValue={defaults?.openingBalance ?? 0}
+              className={inputClass}
+            />
+          </FormField>
+        )}
+
+        {isEdit ? (
+          <FormField
+            label="Adjustment note (optional)"
+            htmlFor="adjustmentNote"
+            hint="Only used if you changed the balance above. Shows up on the resulting adjustment transaction."
+          >
+            <input
+              id="adjustmentNote"
+              name="adjustmentNote"
+              type="text"
+              maxLength={120}
+              placeholder="e.g. Reconciled with bank statement"
+              className={inputClass}
+            />
+          </FormField>
+        ) : null}
 
         {isCredit ? (
           <FormField

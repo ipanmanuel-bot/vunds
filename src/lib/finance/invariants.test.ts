@@ -559,3 +559,91 @@ describe("Fund-attached expenses are excluded from monthly expense", () => {
     expect(cashBalance(account, txs)).toBe(7_000_000);
   });
 });
+
+// =========================================================================
+// Balance adjustments (reconciliation)
+// =========================================================================
+
+import { createAdjustment } from "./transactions";
+
+describe("Balance adjustments", () => {
+  it("adjustment_increase adds to debit cashBalance", () => {
+    const account = bca(5_000_000);
+    const adj = createAdjustment({
+      id: "a1",
+      amount: 100_000,
+      direction: "increase",
+      accountId: account.id,
+      transactionDate: date("2026-09-10"),
+    });
+    expect(cashBalance(account, [adj])).toBe(5_100_000);
+  });
+
+  it("adjustment_decrease subtracts from debit cashBalance", () => {
+    const account = bca(5_000_000);
+    const adj = createAdjustment({
+      id: "a1",
+      amount: 100_000,
+      direction: "decrease",
+      accountId: account.id,
+      transactionDate: date("2026-09-10"),
+    });
+    expect(cashBalance(account, [adj])).toBe(4_900_000);
+  });
+
+  it("adjustment_increase on a credit account grows outstanding", () => {
+    const card = cc(500_000);
+    const adj = createAdjustment({
+      id: "a1",
+      amount: 50_000,
+      direction: "increase",
+      accountId: card.id,
+      transactionDate: date("2026-09-10"),
+    });
+    expect(creditCardOutstanding(card, [adj])).toBe(550_000);
+  });
+
+  it("adjustment_decrease on a credit account shrinks outstanding", () => {
+    const card = cc(500_000);
+    const adj = createAdjustment({
+      id: "a1",
+      amount: 50_000,
+      direction: "decrease",
+      accountId: card.id,
+      transactionDate: date("2026-09-10"),
+    });
+    expect(creditCardOutstanding(card, [adj])).toBe(450_000);
+  });
+
+  it("adjustments do NOT appear in monthlyExpense or monthlyIncome", () => {
+    const account = bca(5_000_000);
+    const incAdj = createAdjustment({
+      id: "a1",
+      amount: 1_000_000,
+      direction: "increase",
+      accountId: account.id,
+      transactionDate: date("2026-09-10"),
+    });
+    const decAdj = createAdjustment({
+      id: "a2",
+      amount: 500_000,
+      direction: "decrease",
+      accountId: account.id,
+      transactionDate: date("2026-09-15"),
+    });
+    expect(monthlyIncome(SEP.year, SEP.month, [incAdj, decAdj])).toBe(0);
+    expect(monthlyExpense(SEP.year, SEP.month, [incAdj, decAdj])).toBe(0);
+  });
+
+  it("factory rejects non-positive amount", () => {
+    expect(() =>
+      createAdjustment({
+        id: "a",
+        amount: 0,
+        direction: "increase",
+        accountId: "x",
+        transactionDate: new Date(),
+      }),
+    ).toThrow();
+  });
+});

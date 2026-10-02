@@ -13,7 +13,12 @@ export type TransactionType =
   | "transfer"
   | "credit_card_payment"
   | "fund_allocation"
-  | "refund";
+  | "refund"
+  // Balance corrections. Affect cashBalance / creditCardOutstanding but are
+  // excluded from monthlyExpense / monthlyIncome / budgets / funds —
+  // adjustments are reconciliations, not spending.
+  | "adjustment_increase"
+  | "adjustment_decrease";
 
 export type TransactionStatus =
   | "pending"

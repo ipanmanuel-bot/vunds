@@ -43,6 +43,16 @@ const typeBadge: Record<
     className: "bg-accent/30 text-accent-strong",
     sign: "+",
   },
+  adjustment_increase: {
+    icon: ArrowDownIcon,
+    className: "bg-surface-tint text-muted-strong",
+    sign: "+",
+  },
+  adjustment_decrease: {
+    icon: ArrowUpIcon,
+    className: "bg-surface-tint text-muted-strong",
+    sign: "-",
+  },
 };
 
 function title(t: TransactionView): string {

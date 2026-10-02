@@ -173,6 +173,41 @@ export function createRefund(input: RefundInput): Transaction {
   };
 }
 
+// =========================================================================
+// Balance adjustment — reconciliation when the account's actual balance
+// (from the bank) diverges from Vunds' computed one.
+//
+// Direction is in the type so we keep the amount > 0 invariant:
+//   increase → balance went UP (debit gets more cash, credit outstanding
+//              grew — you owe more)
+//   decrease → balance went DOWN (debit lost cash, credit outstanding
+//              dropped — you owe less)
+//
+// Adjustments change account balances but DO NOT count toward monthly
+// expense, income, budgets, or fund accounting.
+// =========================================================================
+
+export interface AdjustmentInput extends Common {
+  accountId: string;
+  direction: "increase" | "decrease";
+}
+
+export function createAdjustment(input: AdjustmentInput): Transaction {
+  assertPositive(input.amount);
+  return {
+    id: input.id,
+    type:
+      input.direction === "increase"
+        ? "adjustment_increase"
+        : "adjustment_decrease",
+    status: input.status ?? "confirmed",
+    amount: input.amount,
+    transactionDate: input.transactionDate,
+    accountId: input.accountId,
+    note: input.note,
+  };
+}
+
 export interface PendingImportInput {
   id: string;
   amount: number;
