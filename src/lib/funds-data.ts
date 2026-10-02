@@ -39,6 +39,10 @@ export interface FundSummary {
   currency: string;
   allocated: number;
   spent: number;
+  // What's left in the pocket right now. In the envelope model
+  // (docs/financial-logic.md §8), this is the key number — "how much can
+  // I still spend from this fund without going negative?"
+  remaining: number;
   progressPercent: number | null; // allocated / target; null if no target
 }
 
@@ -75,6 +79,7 @@ function toSummary(r: FundRow, transactions: Transaction[]): FundSummary {
     currency: r.currency,
     allocated,
     spent,
+    remaining: allocated - spent,
     progressPercent,
   };
 }

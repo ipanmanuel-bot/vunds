@@ -12,28 +12,38 @@ function FundRow({ fund }: { fund: FundView }) {
     target != null
       ? Math.min(100, Math.round((fund.allocated / target) * 100))
       : null;
+  const overDrawn = fund.remaining < 0;
 
   return (
     <li className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">{fund.name}</span>
-        <span className="text-sm font-semibold tabular-nums">
-          {formatRupiah(fund.allocated)}
+        <span
+          className={`text-sm font-semibold tabular-nums ${overDrawn ? "text-[color:var(--danger)]" : ""}`}
+        >
+          {overDrawn ? "−" : ""}
+          {formatRupiah(Math.abs(fund.remaining))}
         </span>
       </div>
+      {fund.spent > 0 ? (
+        <p className="text-[11px] text-muted tabular-nums">
+          {formatRupiah(fund.allocated)} allocated ·{" "}
+          {formatRupiah(fund.spent)} spent
+        </p>
+      ) : null}
       {target != null && percent != null ? (
         <>
           <ProgressBar percent={percent} />
           <div className="flex items-center justify-between text-[11px] text-muted">
-            <span>{percent}% of goal</span>
+            <span>{percent}% toward goal</span>
             <span className="tabular-nums">
               target {formatRupiah(target)}
             </span>
           </div>
         </>
-      ) : (
+      ) : fund.spent === 0 ? (
         <p className="text-[11px] text-muted">No target set</p>
-      )}
+      ) : null}
     </li>
   );
 }
@@ -45,7 +55,7 @@ export function FundList({ funds }: { funds: FundView[] }) {
         <div>
           <h2 className="text-sm font-semibold">Funds</h2>
           <p className="text-[11px] text-muted">
-            Virtual allocations — not cash
+            Left in each pocket — not cash balance
           </p>
         </div>
         <Link

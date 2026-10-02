@@ -40,19 +40,44 @@ export default async function FundDetailPage({
             </div>
             <p className="mt-4 text-sm font-medium">{fund.name}</p>
 
+            {/* The hero now leads with "Left in pocket" so the user sees at
+                a glance how much they can still spend from the fund without
+                going negative. Over-draw turns the number red. */}
             <div className="mt-4">
               <p className="text-xs tracking-wide text-muted uppercase">
-                Allocated
+                Left in this pocket
               </p>
-              <p className="mt-1 text-[36px] leading-none font-semibold tracking-tight tabular-nums">
-                {formatRupiah(fund.allocated)}
+              <p
+                className={`mt-1 text-[36px] leading-none font-semibold tracking-tight tabular-nums ${
+                  fund.remaining < 0
+                    ? "text-[color:var(--danger)]"
+                    : "text-foreground"
+                }`}
+              >
+                {fund.remaining < 0 ? "−" : ""}
+                {formatRupiah(Math.abs(fund.remaining))}
               </p>
             </div>
 
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-surface-tint p-3">
+                <p className="text-[11px] text-muted">Allocated</p>
+                <p className="mt-1 text-sm font-semibold tabular-nums">
+                  {formatRupiah(fund.allocated)}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-surface-tint p-3">
+                <p className="text-[11px] text-muted">Spent from fund</p>
+                <p className="mt-1 text-sm font-semibold tabular-nums">
+                  {formatRupiah(fund.spent)}
+                </p>
+              </div>
+            </div>
+
             {fund.targetAmount != null ? (
-              <div className="mt-5 rounded-2xl bg-surface-tint p-4">
+              <div className="mt-4 rounded-2xl bg-surface-tint p-4">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted">Progress</span>
+                  <span className="text-muted">Savings progress</span>
                   <span className="font-medium text-muted-strong tabular-nums">
                     {formatRupiah(fund.allocated)} /{" "}
                     {formatRupiah(fund.targetAmount)}
@@ -67,17 +92,9 @@ export default async function FundDetailPage({
               </div>
             ) : null}
 
-            {fund.spent > 0 ? (
-              <p className="mt-3 text-[11px] text-muted">
-                Spending tagged to this fund{" "}
-                <span className="font-medium text-foreground tabular-nums">
-                  {formatRupiah(fund.spent)}
-                </span>
-              </p>
-            ) : null}
-
             <p className="mt-3 text-[11px] text-muted">
-              Funds describe intent. They do not move cash between accounts.
+              Spending tagged to this fund draws from this pocket. It does{" "}
+              <strong>not</strong> count toward your monthly budget.
             </p>
           </Card>
 

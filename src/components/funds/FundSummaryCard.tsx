@@ -19,9 +19,20 @@ export function FundSummaryCard({ fund }: { fund: FundSummary }) {
         </div>
 
         <div className="mt-4">
-          <p className="text-[11px] text-muted">Allocated</p>
-          <p className="text-[22px] leading-none font-semibold tracking-tight tabular-nums">
-            {formatRupiah(fund.allocated)}
+          <p className="text-[11px] text-muted">Left in pocket</p>
+          <p
+            className={`text-[22px] leading-none font-semibold tracking-tight tabular-nums ${
+              fund.remaining < 0
+                ? "text-[color:var(--danger)]"
+                : "text-foreground"
+            }`}
+          >
+            {fund.remaining < 0 ? "−" : ""}
+            {formatRupiah(Math.abs(fund.remaining))}
+          </p>
+          <p className="mt-1 text-[11px] text-muted tabular-nums">
+            {formatRupiah(fund.allocated)} allocated ·{" "}
+            {formatRupiah(fund.spent)} spent
           </p>
         </div>
 
@@ -29,7 +40,7 @@ export function FundSummaryCard({ fund }: { fund: FundSummary }) {
           <div className="mt-4">
             <ProgressBar percent={fund.progressPercent ?? 0} />
             <div className="mt-1.5 flex items-center justify-between text-[11px] text-muted">
-              <span>{fund.progressPercent ?? 0}% of goal</span>
+              <span>{fund.progressPercent ?? 0}% toward goal</span>
               <span className="tabular-nums">
                 target {formatRupiah(fund.targetAmount)}
               </span>
@@ -38,15 +49,6 @@ export function FundSummaryCard({ fund }: { fund: FundSummary }) {
         ) : (
           <p className="mt-2 text-[11px] text-muted">No target set</p>
         )}
-
-        {fund.spent > 0 ? (
-          <p className="mt-3 text-[11px] text-muted">
-            Spent toward this goal{" "}
-            <span className="font-medium text-foreground tabular-nums">
-              {formatRupiah(fund.spent)}
-            </span>
-          </p>
-        ) : null}
       </Card>
     </Link>
   );

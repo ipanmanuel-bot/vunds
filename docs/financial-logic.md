@@ -215,7 +215,12 @@ This is a virtual allocation.
 
 ---
 
-# 8. Expense Assigned to Fund
+# 8. Expense Assigned to Fund (envelope rule)
+
+Funds are sinking funds — money the household saves up in advance for a
+specific purpose. Spending from a fund draws from that saved pot and must
+NOT consume the monthly budget. The monthly budget is for recurring,
+in-the-moment categories (food, transport, bills); goals get their own pot.
 
 Example:
 
@@ -227,13 +232,17 @@ Category = Wedding / Venue
 
 Effects:
 
-BCA = -10,000,000
-Expense = +10,000,000
-Wedding fund available amount = reduced according to fund rules
+BCA = -10,000,000                    (real cash still leaves the account)
+Wedding fund remaining = -10,000,000 (fund draws down)
+Monthly expense total = unchanged     (fund-attached, excluded)
+Monthly budget = unchanged            (ditto)
 
-The expense remains a normal expense.
+The category is preserved so historical reporting can still answer
+"where did the wedding money go?" — but the category does NOT consume
+a monthly budget allocation when a fund is attached.
 
-Fund assignment is additional metadata/allocation information.
+A fund-attached expense is reported in `fundSpent(fundId)` and excluded
+from `monthlyExpense()`.
 
 ---
 
@@ -316,11 +325,14 @@ calculation, but the resulting behavior must match these rules.
 
 Monthly Expenses include:
 
-- confirmed expenses
-- net of refunds
+- confirmed expenses with NO fund attached
+- net of refunds for those non-fund expenses
 
 Monthly Expenses exclude:
 
+- expenses attached to a fund (envelope rule, §8 — those draw from
+  the fund's own pot, not the monthly budget)
+- refunds of fund-attached expenses (symmetrical to the above)
 - transfers
 - credit card payments
 - fund allocations
@@ -464,7 +476,7 @@ Expense unchanged
 
 ---
 
-## Test 7 — Wedding Expense
+## Test 7 — Wedding Expense (fund-attached, envelope rule)
 
 Wedding venue:
 Rp3M
@@ -473,9 +485,9 @@ Wedding Fund
 
 Expected:
 
-BCA -3M
-Expense +3M
-Wedding spending +3M
+BCA -3M                   (real cash still leaves the account)
+Monthly expense unchanged (fund-attached, excluded per §8/§13)
+Wedding fund spent +3M    (draws from the pot)
 
 ---
 

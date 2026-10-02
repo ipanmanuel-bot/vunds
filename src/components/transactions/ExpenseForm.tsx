@@ -113,7 +113,7 @@ export function ExpenseForm({
         <FormField
           label="Fund (optional)"
           htmlFor="fundId"
-          hint="Attach this expense to a goal — purely informational, does not move money between funds."
+          hint="If you set a fund, this expense draws from that fund's pocket and does NOT count toward your monthly budget. Real cash still leaves the account."
         >
           <select
             id="fundId"

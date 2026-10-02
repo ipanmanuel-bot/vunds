@@ -158,7 +158,10 @@ describe("Acceptance (docs/financial-logic.md §16)", () => {
     expect(monthlyExpense(SEP.year, SEP.month, txs)).toBe(0);
   });
 
-  it("Test 7 — Wedding expense (expense attached to fund)", () => {
+  it("Test 7 — Wedding expense (fund-attached; excluded from monthly expense)", () => {
+    // Envelope-model rule (docs/financial-logic.md §8, §13):
+    //   expenses with fundId draw from the fund, NOT the monthly budget.
+    //   Real cash still leaves the bank; the fund tracks the draw-down.
     const bank = bca(10_000_000);
     const txs = [
       createExpense({
@@ -172,7 +175,9 @@ describe("Acceptance (docs/financial-logic.md §16)", () => {
     ];
 
     expect(cashBalance(bank, txs)).toBe(7_000_000);
-    expect(monthlyExpense(SEP.year, SEP.month, txs)).toBe(3_000_000);
+    // Fund-attached expense does NOT show up here any more.
+    expect(monthlyExpense(SEP.year, SEP.month, txs)).toBe(0);
+    // The fund absorbed the spend.
     expect(fundSpent("wedding", txs)).toBe(3_000_000);
   });
 

@@ -469,3 +469,93 @@ describe("Dedup", () => {
     ).toBe(false);
   });
 });
+
+// =========================================================================
+// Envelope / sinking-fund rule (docs/financial-logic.md §8, §13)
+// =========================================================================
+
+describe("Fund-attached expenses are excluded from monthly expense", () => {
+  it("a regular expense counts; the same expense with a fund does NOT", () => {
+    const account = bca(10_000_000);
+    const regular = createExpense({
+      id: "e1",
+      amount: 500_000,
+      accountId: account.id,
+      categoryId: "food-dining",
+      transactionDate: date("2026-09-10"),
+    });
+    const fundSpend = createExpense({
+      id: "e2",
+      amount: 3_000_000,
+      accountId: account.id,
+      categoryId: "wedding-venue",
+      fundId: "wedding",
+      transactionDate: date("2026-09-11"),
+    });
+
+    expect(monthlyExpense(SEP.year, SEP.month, [regular, fundSpend])).toBe(
+      500_000,
+    );
+  });
+
+  it("budget remaining ignores fund-attached expenses too", () => {
+    const account = bca(10_000_000);
+    const txs = [
+      createExpense({
+        id: "e",
+        amount: 3_000_000,
+        accountId: account.id,
+        categoryId: "wedding-venue",
+        fundId: "wedding",
+        transactionDate: date("2026-09-11"),
+      }),
+    ];
+    const remaining = budgetRemaining(
+      {
+        amount: 5_000_000,
+        year: 2026,
+        month: 9,
+        categoryIds: new Set(["wedding-venue"]),
+      },
+      txs,
+    );
+    // Monthly budget untouched by fund-attached spend.
+    expect(remaining).toBe(5_000_000);
+  });
+
+  it("a refund of a fund-attached expense is also excluded from monthly expense", () => {
+    const account = bca(10_000_000);
+    const original = createExpense({
+      id: "e",
+      amount: 1_000_000,
+      accountId: account.id,
+      categoryId: "wedding-catering",
+      fundId: "wedding",
+      transactionDate: date("2026-09-01"),
+    });
+    const refund = createRefund({
+      id: "r",
+      amount: 200_000,
+      accountId: account.id,
+      refundOfTransactionId: original.id,
+      categoryId: "wedding-catering",
+      transactionDate: date("2026-09-05"),
+    });
+    expect(monthlyExpense(SEP.year, SEP.month, [original, refund])).toBe(0);
+  });
+
+  it("cashBalance still reflects the fund-attached spend (real money left)", () => {
+    const account = bca(10_000_000);
+    const txs = [
+      createExpense({
+        id: "e",
+        amount: 3_000_000,
+        accountId: account.id,
+        categoryId: "wedding-venue",
+        fundId: "wedding",
+        transactionDate: date("2026-09-11"),
+      }),
+    ];
+    expect(cashBalance(account, txs)).toBe(7_000_000);
+  });
+});

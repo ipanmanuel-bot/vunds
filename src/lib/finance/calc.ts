@@ -103,6 +103,14 @@ export interface MonthlyExpenseOptions {
   categoryIds?: Set<string>;
 }
 
+// Envelope model: expenses attached to a fund are "fund-spend" and draw
+// from the fund's allocation, NOT from the monthly budget. They are
+// excluded from monthlyExpense here; funds get their own accounting via
+// `fundSpent`.
+//
+// Refunds for fund-attached expenses are symmetrically excluded (otherwise
+// they'd inflate the net monthly expense without their original being
+// counted).
 export function monthlyExpense(
   year: number,
   month: number,
@@ -110,15 +118,25 @@ export function monthlyExpense(
   options: MonthlyExpenseOptions = {},
 ): number {
   const want = options.categoryIds;
+  const byId = new Map(transactions.map((t) => [t.id, t] as const));
+
   let total = 0;
   for (const t of transactions) {
     if (!isConfirmed(t)) continue;
     if (!inMonth(t.transactionDate, year, month)) continue;
 
     if (t.type === "expense") {
+      // Fund-attached → routed through fundSpent, not monthly budget.
+      if (t.fundId) continue;
       if (want && (!t.categoryId || !want.has(t.categoryId))) continue;
       total += t.amount;
     } else if (t.type === "refund") {
+      // Mirror the above: refunds for fund-attached expenses are also
+      // excluded from monthly expense (they credit the fund instead).
+      const original = t.refundOfTransactionId
+        ? byId.get(t.refundOfTransactionId)
+        : undefined;
+      if (original?.fundId) continue;
       if (want && (!t.categoryId || !want.has(t.categoryId))) continue;
       total -= t.amount;
     }

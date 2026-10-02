@@ -177,8 +177,9 @@ const categoryRows: CategoryRow[] = categoryTree.flatMap((parent, i) => {
 // Budgets (September + October 2026)
 //
 // Monthly budgets for the top-level expense categories most households
-// actively track. Total ~22M IDR/month — in September, 60% is used so the
-// Budget Hero has mid-month-feel numbers to render.
+// actively track as recurring spend. Total 7M IDR/month. Wedding is NOT
+// here — per docs/financial-logic.md §8 (envelope rule), wedding is a
+// fund (sinking savings pot), not a monthly budget category.
 // -------------------------------------------------------------------------
 
 interface BudgetRow {
@@ -197,7 +198,6 @@ const budgetDefs: Array<{ category: string; amount: number }> = [
   { category: "Shopping", amount: 1_500_000 },
   { category: "Bills", amount: 1_500_000 },
   { category: "Entertainment", amount: 500_000 },
-  { category: "Wedding", amount: 15_000_000 },
 ];
 
 const budgetRows: BudgetRow[] = [];

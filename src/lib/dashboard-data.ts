@@ -96,6 +96,9 @@ export interface FundView {
   targetAmount: number | null;
   allocated: number;
   spent: number;
+  // Allocated − spent. The envelope rule means this is the key number:
+  // "how much can I still spend from this pocket?"
+  remaining: number;
   currency: string;
 }
 
@@ -260,14 +263,19 @@ export async function loadDashboard(
   });
 
   // ---- Funds ----
-  const funds: FundView[] = fundRows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    targetAmount: r.target_amount ? Number(r.target_amount) : null,
-    allocated: fundAllocated(r.id, transactions),
-    spent: fundSpent(r.id, transactions),
-    currency: r.currency,
-  }));
+  const funds: FundView[] = fundRows.map((r) => {
+    const allocated = fundAllocated(r.id, transactions);
+    const spent = fundSpent(r.id, transactions);
+    return {
+      id: r.id,
+      name: r.name,
+      targetAmount: r.target_amount ? Number(r.target_amount) : null,
+      allocated,
+      spent,
+      remaining: allocated - spent,
+      currency: r.currency,
+    };
+  });
 
   // ---- Budget summary ----
   // Sum of per-category budgets for the period. Each budget's "remaining" is
