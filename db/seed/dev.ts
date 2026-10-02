@@ -745,6 +745,8 @@ async function seed() {
             type: "debit",
             opening_balance: 5_000_000,
             credit_limit: null,
+            // Matches the "...8899" in fixture-bca-debit-0002 (Grab email).
+            external_identifier: "8899",
           },
           {
             id: ACC_BCA_VERO,
@@ -754,6 +756,7 @@ async function seed() {
             type: "debit",
             opening_balance: 3_000_000,
             credit_limit: null,
+            external_identifier: "7733",
           },
           {
             id: ACC_CASH,
@@ -763,6 +766,7 @@ async function seed() {
             type: "cash",
             opening_balance: 1_000_000,
             credit_limit: null,
+            external_identifier: null,
           },
           {
             id: ACC_CC_IVAN,
@@ -772,6 +776,8 @@ async function seed() {
             type: "credit",
             opening_balance: 0,
             credit_limit: 15_000_000,
+            // Matches the "...4567" in fixture-bca-cc-0001 (Starbucks email).
+            external_identifier: "4567",
           },
         ],
         "id",
@@ -781,6 +787,7 @@ async function seed() {
         "type",
         "opening_balance",
         "credit_limit",
+        "external_identifier",
       )}
     `;
 

@@ -45,12 +45,18 @@ export default async function AccountDetailPage({
   return (
     <div className="min-h-dvh pb-28">
       <div className="mx-auto max-w-md px-5">
-        <header className="pt-6">
+        <header className="flex items-center justify-between pt-6">
           <Link
             href="/accounts"
             className="inline-flex items-center gap-1 text-xs text-muted"
           >
             <ArrowRightIcon className="h-3.5 w-3.5 rotate-180" /> Accounts
+          </Link>
+          <Link
+            href={`/accounts/${account.id}/edit`}
+            className="rounded-full bg-surface-tint px-3 py-1.5 text-[11px] font-medium text-muted-strong"
+          >
+            Edit
           </Link>
         </header>
 

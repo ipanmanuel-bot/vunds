@@ -47,23 +47,40 @@ const EMPTY_RESULT: SyncResult = {
 };
 
 // =========================================================================
-// Dev account-identifier mapping
+// Account-identifier resolution
 //
-// A real Gmail flow needs the user to confirm which of their accounts matches
-// each parsed "ending in 1234" string. In the dev app we accept a simple map
-// and leave `account_id` NULL if we can't resolve — the user picks on confirm.
+// Load once per sync from `accounts.external_identifier`, then match parsed
+// "card ending in 1234" strings. If two accounts share the same tail digits
+// (rare), the first one (sorted by account.name) wins — the user can correct
+// the account on the Inbox form before confirming.
 // =========================================================================
 
-const DEV_ACCOUNT_MAP: Record<string, string> = {
-  // Fixture CC "...4567" maps to the dev credit card.
-  "4567": "deadbeef-0004-0000-0000-000000000004",
-  // Fixture debit "...8899" maps to BCA Ivan.
-  "8899": "deadbeef-0004-0000-0000-000000000001",
-};
+async function loadAccountIdentifierMap(
+  householdId: string,
+): Promise<Map<string, string>> {
+  const rows = await sql<{ id: string; external_identifier: string }[]>`
+    select id, external_identifier
+    from accounts
+    where household_id = ${householdId}
+      and external_identifier is not null
+      and is_active = true
+    order by name
+  `;
+  const map = new Map<string, string>();
+  for (const r of rows) {
+    if (!map.has(r.external_identifier)) {
+      map.set(r.external_identifier, r.id);
+    }
+  }
+  return map;
+}
 
-function resolveAccount(identifier: string | undefined): string | null {
+function resolveAccount(
+  identifier: string | undefined,
+  idMap: Map<string, string>,
+): string | null {
   if (!identifier) return null;
-  return DEV_ACCOUNT_MAP[identifier] ?? null;
+  return idMap.get(identifier) ?? null;
 }
 
 // =========================================================================
@@ -76,6 +93,8 @@ async function processMessages(
 ): Promise<SyncResult> {
   const result: SyncResult = { ...EMPTY_RESULT, errors: [] };
   result.fetched = messages.length;
+
+  const accountIdMap = await loadAccountIdentifierMap(householdId);
 
   for (const msg of messages) {
     try {
@@ -138,7 +157,7 @@ async function processMessages(
               ${randomUUID()}, ${householdId}, ${parsed.type}, 'pending',
               ${parsed.amount}, ${parsed.currency},
               ${dateStr},
-              ${resolveAccount(parsed.accountIdentifier)},
+              ${resolveAccount(parsed.accountIdentifier, accountIdMap)},
               ${parsed.merchant ?? null},
               ${importId}
             )

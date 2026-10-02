@@ -23,6 +23,7 @@ interface AccountRow {
   credit_limit: string | null;
   currency: string;
   is_active: boolean;
+  external_identifier: string | null;
 }
 
 interface MemberRow {
@@ -54,9 +55,13 @@ export interface AccountSummary {
   id: string;
   name: string;
   type: "debit" | "cash" | "credit";
+  ownerMemberId: string | null; // for edit-form prefill; null = joint
   ownerName: string | null; // null = joint
   currency: string;
   openingBalance: number;
+  // Last-4 digits (or similar) used by Gmail parsers to match an incoming
+  // transaction notification to this account. Null for cash accounts.
+  externalIdentifier: string | null;
   isActive: boolean;
 
   // Debit / cash only
@@ -104,35 +109,38 @@ function toSummary(
     currency: r.currency,
   };
 
+  const common = {
+    id: r.id,
+    name: r.name,
+    type: r.type,
+    ownerMemberId: r.owner_member_id,
+    ownerName,
+    currency: r.currency,
+    openingBalance: Number(r.opening_balance),
+    externalIdentifier: r.external_identifier,
+    isActive: r.is_active,
+  } as const;
+
   if (r.type === "credit") {
     const outstanding = creditCardOutstanding(finance, transactions);
     const limit = Number(r.credit_limit);
     const available = creditCardAvailable(finance, transactions);
     return {
-      id: r.id,
-      name: r.name,
+      ...common,
       type: r.type,
-      ownerName,
-      currency: r.currency,
-      openingBalance: Number(r.opening_balance),
-      isActive: r.is_active,
       outstanding,
       available,
       limit,
-      utilizationPercent: limit > 0
-        ? Math.max(0, Math.min(100, Math.round((outstanding / limit) * 100)))
-        : 0,
+      utilizationPercent:
+        limit > 0
+          ? Math.max(0, Math.min(100, Math.round((outstanding / limit) * 100)))
+          : 0,
     };
   }
 
   return {
-    id: r.id,
-    name: r.name,
+    ...common,
     type: r.type,
-    ownerName,
-    currency: r.currency,
-    openingBalance: Number(r.opening_balance),
-    isActive: r.is_active,
     balance: cashBalance(finance, transactions),
   };
 }
@@ -146,7 +154,7 @@ export async function listAccounts(
 ): Promise<AccountSummary[]> {
   const [accountRows, memberRows, txRows] = await Promise.all([
     sql<AccountRow[]>`
-      select id, owner_member_id, name, type, opening_balance, credit_limit, currency, is_active
+      select id, owner_member_id, name, type, opening_balance, credit_limit, currency, is_active, external_identifier
       from accounts
       where household_id = ${householdId}
       order by case type when 'debit' then 1 when 'cash' then 2 when 'credit' then 3 end, name
@@ -178,7 +186,7 @@ export async function getAccount(
   householdId = DEV_HOUSEHOLD_ID,
 ): Promise<AccountSummary | null> {
   const [accountRow] = await sql<AccountRow[]>`
-    select id, owner_member_id, name, type, opening_balance, credit_limit, currency, is_active
+    select id, owner_member_id, name, type, opening_balance, credit_limit, currency, is_active, external_identifier
     from accounts
     where household_id = ${householdId} and id = ${id}
   `;
