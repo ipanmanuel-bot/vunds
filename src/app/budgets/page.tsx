@@ -159,22 +159,36 @@ export default async function BudgetsPage({
 
           <Card className="p-5">
             <div className="mb-2 flex items-end justify-between gap-3">
-              <h2 className="text-sm font-semibold">By category</h2>
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold">By category</h2>
+                <p className="text-[11px] text-muted">
+                  Edit any amount directly — saves as you type.
+                </p>
+              </div>
               <Link
                 href="/categories"
-                className="inline-flex items-center gap-1 text-[11px] text-accent-strong"
+                className="inline-flex shrink-0 items-center gap-1 text-[11px] text-accent-strong"
               >
                 Customize categories <ArrowRightIcon className="h-3 w-3" />
               </Link>
             </div>
             {budget.lines.length === 0 ? (
               <p className="text-sm text-muted">
-                No budgets set for {periodLabel}.
+                No expense categories yet. Add some from{" "}
+                <Link href="/categories" className="text-accent-strong">
+                  Customize categories
+                </Link>
+                .
               </p>
             ) : (
               <ul className="divide-y divide-border">
                 {budget.lines.map((line) => (
-                  <BudgetRow key={line.id} line={line} />
+                  <BudgetRow
+                    key={line.categoryId}
+                    line={line}
+                    year={budget.year}
+                    month={budget.month}
+                  />
                 ))}
               </ul>
             )}

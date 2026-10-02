@@ -27,6 +27,7 @@ interface CategoryRow {
   parent_id: string | null;
   name: string;
   parent_name: string | null;
+  kind: "income" | "expense";
 }
 
 interface TxRow {
@@ -50,15 +51,17 @@ interface TxRow {
 // =========================================================================
 
 export interface BudgetLine {
-  id: string;
+  // Row key = categoryId. Not every line has a `budgets` row backing it
+  // (unbudgeted categories still appear in the list, with amount=0).
   categoryId: string;
   categoryName: string;
   categoryParentName: string | null;
-  amount: number;
-  spent: number;
-  remaining: number;
-  percentUsed: number; // can exceed 100 when over-budget
+  amount: number;         // 0 means "no budget set"
+  spent: number;          // from monthlyExpense (fund-attached excluded)
+  remaining: number;      // amount − spent; negative when over
+  percentUsed: number;    // 0 when amount==0
   currency: string;
+  hasBudget: boolean;     // amount > 0
 }
 
 export interface BudgetPeriod {
@@ -115,11 +118,15 @@ export async function getBudget(
         and period_year = ${year}
         and period_month = ${month}
     `,
+    // All categories — we need the full tree for descendant rollup, even if
+    // we only emit top-level rows below.
     sql<CategoryRow[]>`
-      select c.id, c.parent_id, c.name, p.name as parent_name
+      select c.id, c.parent_id, c.name, c.kind, p.name as parent_name
       from categories c
       left join categories p on p.id = c.parent_id
       where c.household_id = ${householdId}
+        and c.is_archived = false
+      order by coalesce(p.sort_order, c.sort_order), c.sort_order, c.name
     `,
     sql<TxRow[]>`
       select id, type, status, amount, transaction_date,
@@ -131,46 +138,50 @@ export async function getBudget(
     `,
   ]);
 
-  const categoryById = new Map(categoryRows.map((c) => [c.id, c]));
   const childrenMap = buildChildrenMap(
     categoryRows.map((c) => ({ id: c.id, parentId: c.parent_id })),
   );
   const transactions = txRows.map(rowToTransaction);
 
-  const lines: BudgetLine[] = budgetRows
-    .map((b) => {
-      const amount = Number(b.amount);
-      const descendantIds = getDescendantIds(childrenMap, b.category_id);
-      // budgetRemaining() from the Phase 2 finance library — the authoritative
-      // calculation. Status filtering (confirmed only) and refund netting live
-      // inside monthlyExpense().
-      const remaining = budgetRemaining(
-        {
-          amount,
-          year: b.period_year,
-          month: b.period_month,
-          categoryIds: descendantIds,
-        },
-        transactions,
-      );
-      const spent = amount - remaining;
-      const cat = categoryById.get(b.category_id);
-      return {
-        id: b.id,
-        categoryId: b.category_id,
-        categoryName: cat?.name ?? "Unknown category",
-        categoryParentName: cat?.parent_name ?? null,
-        amount,
-        spent,
-        remaining,
-        percentUsed: amount > 0 ? Math.round((spent / amount) * 100) : 0,
-        currency: b.currency,
-      };
-    })
-    .sort((a, b) => b.amount - a.amount);
+  // Iterate every non-archived expense top-level category. Join with the
+  // sparse budgets table — missing rows mean "amount = 0" (not budgeted).
+  const budgetByCategory = new Map(
+    budgetRows.map((b) => [b.category_id, Number(b.amount)]),
+  );
+
+  const topExpenseCategories = categoryRows.filter(
+    (c) => c.parent_id == null && c.kind === "expense",
+  );
+
+  const lines: BudgetLine[] = topExpenseCategories.map((cat) => {
+    const amount = budgetByCategory.get(cat.id) ?? 0;
+    const descendantIds = getDescendantIds(childrenMap, cat.id);
+    // Compute spent directly from monthlyExpense (the envelope-rule exclusion
+    // of fund-attached expenses lives inside this function). budgetRemaining
+    // would also work but we need `spent` for the UI either way.
+    const spent = monthlyExpense(year, month, transactions, {
+      categoryIds: descendantIds,
+    });
+    const remaining = amount - spent;
+    return {
+      categoryId: cat.id,
+      categoryName: cat.name,
+      categoryParentName: cat.parent_name,
+      amount,
+      spent,
+      remaining,
+      percentUsed: amount > 0 ? Math.round((spent / amount) * 100) : 0,
+      currency: "IDR",
+      hasBudget: amount > 0,
+    };
+  });
 
   const totalBudget = lines.reduce((s, l) => s + l.amount, 0);
   const totalSpent = lines.reduce((s, l) => s + l.spent, 0);
+
+  // Keep the reference so the import is used (even in the simplified path
+  // where we moved to monthlyExpense directly).
+  void budgetRemaining;
 
   return {
     year,
