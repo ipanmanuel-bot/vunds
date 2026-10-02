@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { allocateToFundAction } from "@/app/goals/actions";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { Card } from "@/components/ui/Card";
+import { FormField, inputClass } from "@/components/ui/FormField";
 import { Pill } from "@/components/ui/Pill";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { ArrowRightIcon } from "@/components/ui/icons";
 import { getFund, getFundActivity } from "@/lib/funds-data";
 import { formatRupiah } from "@/lib/format";
@@ -96,6 +99,45 @@ export default async function FundDetailPage({
               Spending tagged to this fund draws from this pocket. It does{" "}
               <strong>not</strong> count toward your monthly budget.
             </p>
+          </Card>
+
+          <Card className="p-5">
+            <p className="text-sm font-semibold">Allocate money</p>
+            <p className="mt-1 text-[11px] text-muted">
+              Earmark money from your accounts for this goal. Allocation is
+              virtual — your bank balances don&apos;t change, but this
+              fund&apos;s pocket grows.
+            </p>
+            <form action={allocateToFundAction} className="mt-4 flex flex-col gap-3">
+              <input type="hidden" name="fundId" value={fund.id} />
+              <FormField label="Amount (IDR)" htmlFor="amount">
+                <input
+                  id="amount"
+                  name="amount"
+                  type="number"
+                  inputMode="numeric"
+                  step="1"
+                  min="1"
+                  required
+                  placeholder="0"
+                  className={inputClass}
+                />
+              </FormField>
+              <FormField label="Note (optional)" htmlFor="note">
+                <input
+                  id="note"
+                  name="note"
+                  type="text"
+                  maxLength={120}
+                  placeholder="e.g. September bonus"
+                  className={inputClass}
+                />
+              </FormField>
+              <SubmitButton
+                idleLabel="Add to this fund"
+                pendingLabel="Allocating…"
+              />
+            </form>
           </Card>
 
           <section>
