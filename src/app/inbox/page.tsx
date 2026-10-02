@@ -6,6 +6,10 @@ import { listPending } from "@/lib/inbox-data";
 
 export const dynamic = "force-dynamic";
 
+// Gmail sync can touch dozens of messages; the default 10s function budget
+// is too tight. 60s is Vercel Hobby's max.
+export const maxDuration = 60;
+
 function parseFlash(sp: Record<string, string | string[] | undefined>): {
   kind: "sync" | "oauth" | null;
   message: string | null;

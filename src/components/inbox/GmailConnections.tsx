@@ -3,6 +3,7 @@ import {
   syncFixturesAction,
   syncGmailAction,
 } from "@/app/inbox/actions";
+import { SubmitButton } from "@/components/inbox/SubmitButton";
 import { Card } from "@/components/ui/Card";
 
 export interface GmailConnection {
@@ -74,12 +75,10 @@ export function GmailConnections({
       <div className="mt-4 flex flex-col gap-2">
         {hasAny ? (
           <form action={syncGmailAction}>
-            <button
-              type="submit"
-              className="w-full rounded-xl bg-foreground py-3 text-sm font-medium text-background"
-            >
-              Sync all inboxes now
-            </button>
+            <SubmitButton
+              idleLabel="Sync all inboxes now"
+              pendingLabel="Syncing — this can take up to a minute…"
+            />
           </form>
         ) : null}
 
@@ -98,13 +97,11 @@ export function GmailConnections({
         </a>
 
         <form action={syncFixturesAction}>
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-surface-tint py-2 text-xs font-medium text-muted-strong"
-            title="Dev-only: runs the same pipeline against bundled sample bank emails."
-          >
-            Sync fixture messages (dev)
-          </button>
+          <SubmitButton
+            idleLabel="Sync fixture messages (dev)"
+            pendingLabel="Syncing fixtures…"
+            tone="muted"
+          />
         </form>
       </div>
 

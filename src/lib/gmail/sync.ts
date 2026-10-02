@@ -215,16 +215,27 @@ export async function syncGmail(
       continue;
     }
 
-    for (const id of ids) {
-      try {
-        const res = await client.getMessage(id);
-        allMessages.push(flattenMessage(res));
-      } catch (e) {
-        console.error(
-          `Gmail get failed for ${token.accountEmail}/${id}: ${
-            e instanceof Error ? e.message : e
-          }`,
-        );
+    // Fetch messages in parallel batches. Serial was taking us over the
+    // Vercel 10s function budget on inboxes with 20+ bank emails. Chunking
+    // keeps us well under Gmail's per-user per-second quota (250 units/s;
+    // messages.get is 5 units each).
+    const CONCURRENCY = 10;
+    for (let i = 0; i < ids.length; i += CONCURRENCY) {
+      const chunk = ids.slice(i, i + CONCURRENCY);
+      const settled = await Promise.allSettled(
+        chunk.map((id) => client.getMessage(id)),
+      );
+      for (let j = 0; j < settled.length; j++) {
+        const r = settled[j]!;
+        if (r.status === "fulfilled") {
+          allMessages.push(flattenMessage(r.value));
+        } else {
+          console.error(
+            `Gmail get failed for ${token.accountEmail}/${chunk[j]}: ${
+              r.reason instanceof Error ? r.reason.message : r.reason
+            }`,
+          );
+        }
       }
     }
   }
