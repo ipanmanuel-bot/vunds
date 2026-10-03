@@ -9,7 +9,11 @@ import { getPending } from "@/lib/inbox-data";
 import { formatRupiah, formatShortDate } from "@/lib/format";
 import { getFormOptions } from "@/lib/transactions-data";
 
-export const dynamic = "force-dynamic";
+// Short-TTL ISR: cached HTML served between regenerations. Mutations
+// still invalidate immediately via revalidatePath in server actions, so
+// users see fresh data after they save — the 30s is only a cap on how
+// stale OTHER sessions could be.
+export const revalidate = 30;
 
 export default async function PendingDetailPage({
   params,

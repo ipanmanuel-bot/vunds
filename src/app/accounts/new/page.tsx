@@ -4,7 +4,11 @@ import { AccountForm } from "@/components/accounts/AccountForm";
 import { ArrowRightIcon } from "@/components/ui/icons";
 import { getFormOptions } from "@/lib/transactions-data";
 
-export const dynamic = "force-dynamic";
+// Short-TTL ISR: cached HTML served between regenerations. Mutations
+// still invalidate immediately via revalidatePath in server actions, so
+// users see fresh data after they save — the 30s is only a cap on how
+// stale OTHER sessions could be.
+export const revalidate = 30;
 
 export default async function NewAccountPage() {
   const options = await getFormOptions();

@@ -7,7 +7,11 @@ import { FormField, inputClass } from "@/components/ui/FormField";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { ArrowRightIcon } from "@/components/ui/icons";
 
-export const dynamic = "force-dynamic";
+// Short-TTL ISR: cached HTML served between regenerations. Mutations
+// still invalidate immediately via revalidatePath in server actions, so
+// users see fresh data after they save — the 30s is only a cap on how
+// stale OTHER sessions could be.
+export const revalidate = 30;
 
 export default function NewFundPage() {
   return (

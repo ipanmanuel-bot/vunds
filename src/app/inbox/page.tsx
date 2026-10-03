@@ -4,7 +4,11 @@ import { Card } from "@/components/ui/Card";
 import { listTokens } from "@/lib/gmail-tokens";
 import { listPending } from "@/lib/inbox-data";
 
-export const dynamic = "force-dynamic";
+// Short-TTL ISR: cached HTML served between regenerations. Mutations
+// still invalidate immediately via revalidatePath in server actions, so
+// users see fresh data after they save — the 30s is only a cap on how
+// stale OTHER sessions could be.
+export const revalidate = 30;
 
 // Gmail sync can touch dozens of messages; the default 10s function budget
 // is too tight. 60s is Vercel Hobby's max.

@@ -13,7 +13,11 @@ import {
 } from "@/lib/budgets-data";
 import { formatRupiah, monthName } from "@/lib/format";
 
-export const dynamic = "force-dynamic";
+// Short-TTL ISR: cached HTML served between regenerations. Mutations
+// still invalidate immediately via revalidatePath in server actions, so
+// users see fresh data after they save — the 30s is only a cap on how
+// stale OTHER sessions could be.
+export const revalidate = 30;
 
 function parsePeriod(
   raw: string | undefined,
