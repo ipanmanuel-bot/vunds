@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { sql } from "@/lib/db";
+import { sql, withTx } from "@/lib/db";
 import { DEV_HOUSEHOLD_ID, DEV_VIEWER } from "@/lib/dev";
 import { deleteTokenById } from "@/lib/gmail-tokens";
 import { syncFixtures, syncGmail, type SyncResult } from "@/lib/gmail/sync";
@@ -45,9 +45,9 @@ export async function confirmPendingAction(formData: FormData): Promise<void> {
   const note = optionalStr(formData, "note");
   const saveAsRule = hasFlag(formData, "saveAsRule");
 
-  await sql.begin(async (db) => {
+  await withTx(async (txn) => {
     // 1. Promote the pending transaction.
-    const [updated] = await db<{ id: string }[]>`
+    const [updated] = await txn<{ id: string }[]>`
       update transactions
       set status      = 'confirmed',
           category_id = ${categoryId},
@@ -71,7 +71,7 @@ export async function confirmPendingAction(formData: FormData): Promise<void> {
     //    match by default — users can edit to `contains` later if they want
     //    a keyword rule across similar merchants.
     if (saveAsRule && merchant && categoryId) {
-      await db`
+      await txn`
         insert into merchant_rules (
           id, household_id, pattern, match_type, category_id, fund_id,
           priority, created_from_transaction_id

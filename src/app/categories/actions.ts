@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { sql } from "@/lib/db";
+import { sql, withTx } from "@/lib/db";
 import { DEV_HOUSEHOLD_ID } from "@/lib/dev";
 
 function str(formData: FormData, key: string): string {
@@ -158,12 +158,12 @@ export async function archiveCategoryAction(formData: FormData): Promise<void> {
     );
   }
 
-  await sql.begin(async (db) => {
-    await db`
+  await withTx(async (txn) => {
+    await txn`
       update categories set is_archived = true
       where household_id = ${DEV_HOUSEHOLD_ID} and id = ${id}
     `;
-    await db`
+    await txn`
       update categories set is_archived = true
       where household_id = ${DEV_HOUSEHOLD_ID} and parent_id = ${id}
     `;

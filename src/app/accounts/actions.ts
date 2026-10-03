@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getAccount } from "@/lib/accounts-data";
-import { sql } from "@/lib/db";
+import { sql, withTx } from "@/lib/db";
 import { DEV_HOUSEHOLD_ID, DEV_VIEWER } from "@/lib/dev";
 
 // =========================================================================
@@ -159,8 +159,8 @@ export async function updateAccountAction(formData: FormData): Promise<void> {
     account.type === "credit" ? (account.outstanding ?? 0) : (account.balance ?? 0);
   const delta = currentBalanceInput - currentValue;
 
-  await sql.begin(async (db) => {
-    await db`
+  await withTx(async (txn) => {
+    await txn`
       update accounts set
         name                 = ${name},
         owner_member_id      = ${ownerMemberId},
@@ -173,7 +173,7 @@ export async function updateAccountAction(formData: FormData): Promise<void> {
       const direction = delta > 0 ? "adjustment_increase" : "adjustment_decrease";
       const magnitude = Math.abs(delta);
       const dateStr = new Date().toISOString().slice(0, 10);
-      await db`
+      await txn`
         insert into transactions (
           id, household_id, created_by_member_id, type, status, amount, currency,
           transaction_date, account_id, note

@@ -15,7 +15,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import { sql } from "../db";
+import { sql, withTx } from "../db";
 import { DEV_HOUSEHOLD_ID } from "../dev";
 import { listTokens } from "../gmail-tokens";
 import { findParser } from "../parsers/registry";
@@ -124,8 +124,15 @@ async function processMessages(
       const importId = randomUUID();
       let wasInserted = false;
 
-      await sql.begin(async (db) => {
-        const inserted = await db<{ id: string }[]>`
+      await withTx(async (txn) => {
+        // Pass the raw-metadata object as JSON — the pg driver serialises
+        // it to jsonb because the column type is jsonb.
+        const rawMetadata = JSON.stringify({
+          from: msg.from,
+          subject: msg.subject,
+          ...(parsed?.rawMetadata ?? {}),
+        });
+        const inserted = await txn<{ id: string }[]>`
           insert into imported_messages (
             id, household_id, source, source_message_id, provider,
             parse_status, parsed_at, raw_metadata
@@ -134,11 +141,7 @@ async function processMessages(
             ${parser?.provider ?? null},
             ${parseStatus},
             ${parsed ? new Date() : null},
-            ${db.json({
-              from: msg.from,
-              subject: msg.subject,
-              ...(parsed?.rawMetadata ?? {}),
-            })}
+            ${rawMetadata}::jsonb
           )
           on conflict (household_id, source, source_message_id) do nothing
           returning id
@@ -149,7 +152,7 @@ async function processMessages(
 
         if (createTransaction && parsed) {
           const dateStr = parsed.transactionDate.toISOString().slice(0, 10);
-          await db`
+          await txn`
             insert into transactions (
               id, household_id, type, status, amount, currency,
               transaction_date, account_id, merchant, imported_message_id
